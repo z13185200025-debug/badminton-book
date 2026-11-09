@@ -1,0 +1,11 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+const root=path.resolve(import.meta.dirname,'..'),app=path.join(root,'羽毛球预约助手.app'),contents=path.join(app,'Contents');
+await fs.mkdir(path.join(contents,'MacOS'),{recursive:true});await fs.mkdir(path.join(contents,'Resources'),{recursive:true});
+const version=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8')).version.split('-')[0];
+const plist=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleExecutable</key><string>Badminton</string><key>CFBundleIdentifier</key><string>cn.buaa.badminton.manual</string><key>CFBundleName</key><string>羽毛球预约助手</string><key>CFBundleDisplayName</key><string>羽毛球预约助手</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>${version}</string><key>CFBundleVersion</key><string>2</string><key>NSHighResolutionCapable</key><true/><key>LSMinimumSystemVersion</key><string>13.0</string><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>`;
+await fs.writeFile(path.join(contents,'Info.plist'),plist);
+execFileSync('/usr/bin/xcrun',['clang','-fobjc-arc','-arch','arm64','-arch','x86_64','-mmacosx-version-min=13.0','-framework','Cocoa','-framework','WebKit',path.join(root,'macos/App.m'),'-o',path.join(contents,'MacOS/Badminton')],{stdio:'inherit'});
+execFileSync('/usr/bin/codesign',['--force','--deep','--sign','-',app],{stdio:'pipe'});
+console.log(app);

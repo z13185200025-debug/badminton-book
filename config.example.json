@@ -1,0 +1,33 @@
+{
+  "origin": "https://hzsm.buaa.edu.cn",
+  "venueId": 346,
+  "accountName": "",
+  "candidates": [
+    {
+      "slot": "19:00-20:00",
+      "courts": [
+        "No.1",
+        "No.2",
+        "No.3",
+        "No.4",
+        "No.5",
+        "No.6",
+        "No.7",
+        "No.8",
+        "No.9"
+      ]
+    }
+  ],
+  "autoPay": false,
+  "daysAhead": 2,
+  "timezone": "Asia/Shanghai",
+  "releaseTime": "08:00:00",
+  "preheatTime": "07:55",
+  "bookingDelayMs": 2000,
+  "headless": true,
+  "maxAmount": 0,
+  "releaseWindowSeconds": 120,
+  "captchaTimeoutSeconds": 300,
+  "maxCaptchaAttempts": 2,
+  "schoolAutomationPermissionConfirmed": false
+}

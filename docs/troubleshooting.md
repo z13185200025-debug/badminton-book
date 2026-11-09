@@ -1,0 +1,21 @@
+# 常见问题
+
+| 现象 | 处理 |
+| --- | --- |
+| 找不到 node / Node 版本低 | 安装官网 Node.js LTS，版本至少 22，重新打开终端；检查 `node --version`。 |
+| 找不到浏览器 | 安装 Chrome；Windows 也支持 Edge，Linux 可用 Chromium。自定义位置通过 `BADMINTON_BROWSER_EXECUTABLE` 指定绝对路径。 |
+| 找不到 playwright-core / pngjs / fflate | 确认解压了完整发布包。源码下载需要先执行 `npm ci`。 |
+| 已经打开此目录的助手 | 使用原有窗口，或正常关闭后重开。不要同时从两个进程操作同一账号资料。 |
+| 登录后仍提示姓名不符 | 填写学校网页右上角显示的姓名，检查当前账号登录窗口。两个不同账号必须各自登录，不共用浏览器目录。 |
+| Linux 缺少图形环境 | 在桌面终端启动，并检查 DISPLAY / WAYLAND_DISPLAY；首次登录不能仅通过无桌面的 SSH 完成。 |
+| 窗口卡住或结果不明确 | 先到学校订单页核对。不要因界面超时立即重复下单。查看该账号的状态和运行记录。 |
+| 验证码或学校页面变化 | 查看对应阶段和接口耗时；自动处理无法完成时会停止。确认网站当前流程后再更新脚本。 |
+| 08:00 前看不到后天 | 属于尚未放号的正常情况；选择“本次等到 08:00”，预热后会在放号窗口刷新可用场地。 |
+| 电脑休眠后错过放号 | 保持接电联网且不休眠；唤醒请求不能覆盖关机、主动休眠、合盖策略和电源中断。 |
+| 抢订完成但第二天没有执行 | 这是一次性应用，必须再次打开并点击开始。不会创建系统每日定时任务。 |
+
+原账号的数据在 `.state/profile`，新增账号在 `.state/accounts/<账号 ID>/profile`。各账号使用独立锁、状态和配置快照。Windows / Linux 新界面自身的资料在 `.state/interface-profile`，与学校登录资料分开。
+
+每次运行的 `artifacts/runs/<运行 ID>/events.jsonl` 与 `timings.json` 保存阶段和耗时；成功后还保存订单核对结果。日志或截图可能带有本人姓名、订单信息，分享排错资料前请自行脱敏。不要把 `.state`、`config.json` 或运行后的整个目录发给别人。
+
+核验下载：Windows PowerShell 使用 `Get-FileHash 文件名.zip -Algorithm SHA256`；Linux 使用 `sha256sum 文件名.zip`；macOS 使用 `shasum -a 256 文件名.zip`，与 Release 中的 `.sha256` 对照。

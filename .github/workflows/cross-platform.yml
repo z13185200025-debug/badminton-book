@@ -1,0 +1,56 @@
+name: Cross-platform checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      BADMINTON_BROWSER_CHANNEL: chromium
+      BADMINTON_TEST_HEADED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Install matching Chromium and dependencies
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Full suite (Linux display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm test
+      - name: Full suite (Windows / macOS)
+        if: runner.os != 'Linux'
+        run: npm test
+      - name: Build portable archives
+        run: npm run package
+      - name: Extract and run Linux package and shell launcher
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node tools/smoke-package.mjs release/badminton-book-1.3.0-linux.zip
+      - name: Extract and run Windows package and cmd launcher
+        if: runner.os == 'Windows'
+        run: node tools/smoke-package.mjs release/badminton-book-1.3.0-windows.zip
+      - name: Verify both portable archives on macOS
+        if: runner.os == 'macOS'
+        run: |
+          node tools/smoke-package.mjs release/badminton-book-1.3.0-windows.zip
+          node tools/smoke-package.mjs release/badminton-book-1.3.0-linux.zip
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: success()
+        with:
+          name: verified-packages-${{ runner.os }}
+          path: release/*
+          if-no-files-found: error

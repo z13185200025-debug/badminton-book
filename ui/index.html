@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>羽毛球预约助手</title><link rel="stylesheet" href="/style.css"><link rel="icon" href="/icon.svg"></head>
+<body><main>
+  <header class="topbar">
+    <div class="brand"><img src="/icon.svg" alt="" width="36" height="36"><div><h1>羽毛球预约助手</h1><small>北航国新院 · 本机运行</small></div></div>
+    <div class="header-actions"><div class="session-badge"><i></i>单次执行</div><button id="account-button" class="account-button" type="button"><span id="account-name">账号设置</span><small>账号与登录 ↗</small></button></div>
+  </header>
+  <div id="connection-error" class="notice error" role="alert" hidden></div>
+  <div class="layout">
+    <section class="card accounts-card">
+      <div class="section-title"><h2>账号与预约计划</h2><div class="account-tools"><button id="save-plans" class="secondary-button" type="button">保存已选计划</button><button id="add-account" class="secondary-button" type="button">＋ 添加账号</button></div></div>
+      <p class="hint">勾选本次参与的账号，点击“配置”分别设置时段和 Pay。每个账号独立登录、预热和执行，最多 8 个。</p>
+      <div id="account-list" class="account-list" aria-label="账号与预约计划"></div>
+      <p id="batch-summary" class="batch-summary" aria-live="polite">尚未启动。</p>
+    </section>
+    <form id="booking-form" class="card booking-card">
+      <div class="section-title"><h2 id="config-title">预约配置</h2><span class="subtle">每账号 ¥0 · 1 小时</span></div>
+      <p id="venue-name" class="venue-name">羽毛球馆（篮球馆一层）</p>
+      <fieldset id="controls">
+        <div class="field-row"><label class="field">预约日期（全部账号）<input id="date" type="date" required><span id="date-hint" class="hint"></span></label><label class="field">该账号首选时段<select id="slot" aria-label="首选时段"></select></label></div>
+        <div class="field court-field"><div class="field-heading"><span>场号优先级</span><span class="hint">从左到右依次尝试</span></div><div id="courts" class="court-list" aria-label="场号优先级"></div><button id="restore-courts" class="text-button" type="button" hidden>恢复全部场号</button></div>
+        <details class="fallback-details"><summary>备选时段 <span id="fallback-count" class="subtle">未添加</span></summary><p class="hint">首选时段的场号均不可用时，按顺序尝试备选。</p><div id="fallback-list"></div><div class="add-fallback"><select id="fallback-slot" aria-label="添加备选时段"></select><button id="add-fallback" class="secondary-button" type="button">添加</button></div></details>
+        <div class="divider"></div>
+        <div class="field"><span>启动策略（全部账号）</span><div class="mode-options"><label class="mode"><input name="mode" type="radio" value="now" checked><span><strong>现在开始</strong><small>场次已开放</small></span></label><label class="mode"><input name="mode" type="radio" value="release"><span><strong>本次等到 08:00</strong><small>提前 5 分钟预热</small></span></label></div><p id="schedule-note" class="hint schedule-note"></p></div>
+        <div class="delay-setting"><label class="field" for="booking-delay">选场前延迟（秒）<input id="booking-delay" type="number" value="2" min="0" max="30" step="0.1" required></label><p class="hint">新预约只延迟一次；备选不重复等待。<br>默认 +2 秒，实际订单时间以服务器记录为准。</p></div>
+        <label class="check-option"><input id="auto-pay" type="checkbox"><span><strong>自动完成零元预约</strong><small>核验场次与 ¥0 后点击 Pay；关闭时停在 Pay。</small></span></label>
+        <label class="check-option small"><input id="visible" type="checkbox"><span>显示学校 Chrome 页面</span></label>
+        <button id="start" type="submit" class="primary-button">开始本次预约 <span>→</span></button>
+      </fieldset>
+      <button id="stop" type="button" class="stop-button" hidden>停止本次执行</button>
+      <p class="footnote">开始按钮执行所有已勾选账号。关闭应用停止全部未完成任务。</p>
+    </form>
+    <aside class="side-column">
+      <section class="card status-card" aria-live="polite">
+        <div class="section-title"><h2 id="run-account-title">运行状态</h2><span id="status-dot" class="status-dot"></span></div>
+        <div class="status-heading"><span id="status-icon" class="status-icon">○</span><h3 id="status-title">准备就绪</h3></div><p id="status-description"></p>
+        <div class="selection-summary"><strong id="summary-date">后天</strong><span id="summary-slot">19:00 — 20:00</span></div>
+        <div id="metrics" class="metrics"></div>
+        <div id="order" class="order-info" hidden></div><div id="run-error" class="notice error" hidden></div>
+      </section>
+      <section class="card technical-card"><div class="section-title"><h2>执行参数</h2><span class="subtle">北京时间</span></div><dl id="technical" class="technical-list"></dl></section>
+    </aside>
+    <section class="card diagnostics-card">
+      <div class="section-title"><h2>接口与阶段记录</h2><span id="telemetry-note" class="subtle">等待本次运行</span></div>
+      <div class="diagnostics-layout">
+        <div><h3 class="small-heading">接口响应</h3><p class="hint">最近一次耗时 · 请求总次数 · HTTP 状态</p><div id="requests-empty" class="empty">运行后显示场次查询、验证码和订单请求。</div><div class="table-scroll"><table id="requests-table" hidden><thead><tr><th>接口</th><th>耗时</th><th>次数</th><th>状态</th></tr></thead><tbody id="requests"></tbody></table></div></div>
+        <div><div class="field-heading"><h3 class="small-heading">阶段记录</h3><span id="timeline-origin" class="hint">本地时间 / 相对耗时</span></div><p id="timeline-empty" class="empty">尚未启动。</p><ol id="timeline" class="timeline"></ol></div>
+      </div>
+    </section>
+  </div>
+  <footer><span>电脑保持联网、接电和唤醒；熄屏可以，休眠会中断执行。</span><span>本机登录态 · 无每日任务</span></footer>
+</main>
+<dialog id="account-dialog"><form id="settings-form"><div class="dialog-heading"><h2 id="settings-title">账号与登录</h2><button id="close-settings" type="button" class="icon-button" aria-label="关闭账号设置">×</button></div><p class="hint">每个账号使用独立浏览器登录资料。首次在学校页面登录，密码不填到助手里。</p><label class="field">账号备注<input id="settings-label" autocomplete="off" maxlength="40" placeholder="例如：本人、同学 A"></label><label class="field">网页右上角显示的姓名<input id="settings-name" autocomplete="off" maxlength="60" placeholder="填写学校页面显示的姓名" required></label><label class="check-option"><input id="permission" type="checkbox"><span>我已获准使用此账号及学校自动化预约</span></label><p id="profile-note" class="hint"></p><div id="settings-error" class="notice error" hidden></div><div class="dialog-actions"><button id="save-settings" class="secondary-button" type="submit">保存设置</button><button id="login" class="primary-button" type="button">打开此账号登录</button></div></form></dialog>
+<script type="module" src="/app.js"></script>
+</body></html>
