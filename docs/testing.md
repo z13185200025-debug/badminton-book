@@ -31,8 +31,19 @@ node node_modules/playwright-core/cli.js install chromium
 - Windows / Linux 浏览器检测、中文及空格目录、IPC 停止、关闭窗口清理。
 - ZIP 清单与每个文件 SHA-256、私有数据排除、解压后初始空账号和手动启动状态。
 
-## 本次验证状态
+## 1.3.0 实际验证结果
 
-发布前在此记录每个平台的实际测试结果。原始 Mac ZIP 通过独立 SHA-256 校验保留，原 Mac 安装目录不参与新的运行测试。
+2026-11-09，代码提交 `7bf3261578a2e9cb9df989b7b151fa0f15fee99e` 的 [三系统 CI](https://github.com/z13185200025-debug/badminton-book/actions/runs/42561607608) 全部通过。
 
-原生 Windows / Linux 验证与当前代码回归结果将记录在 Release 说明和 GitHub Actions 的 `Cross-platform checks` 工作流中。尚未实际完成的平台不能视为已通过。
+| 原生运行环境 | Node.js / 浏览器 | 回归测试 | 解压启动验证 |
+| --- | --- | --- | --- |
+| Windows Server 2025，GitHub Windows 运行器 | 22.23.4 / Chromium 151.0.7922.34 | 57 通过，0 失败，0 跳过 | Windows ZIP 与 `.cmd` 入口均通过，正常关闭后进程清理完成 |
+| Ubuntu 24.04，GitHub Linux 运行器 | 22.23.4 / Chromium 151.0.7922.34 | 57 通过，0 失败，0 跳过 | Linux ZIP 与 `.sh` 入口均通过，使用 Xvfb 显示环境 |
+| macOS 26.7.2 ARM64，GitHub Mac 运行器 | 22.23.4 / Chromium 151.0.7922.34 | 57 通过，0 失败，0 跳过 | 两种通用 ZIP 均可解压、打开界面并正常关闭 |
+| 开发用 Mac，本地 Chrome | Node.js 26.3.0 | 57 通过，0 失败，0 跳过 | 中文/空格目录、真实窗口启动关闭通过 |
+
+发布的 Windows / Linux ZIP 直接采用各自原生 CI 构建并验证过的文件。包内说明生成于测试前，最终测试结果以本页及 Release 记录为准。此后的文档提交只补充测试结果，运行代码保持上述测试版本。
+
+Mac 下载保留原始 `1.2.0-rc.1` ZIP：SHA-256 与修改前一致，包内 183 个文件逐项校验通过；当前 Mac 安装目录的 45 个发布源码/启动器文件校验值也保持一致。原版应用未重编译或重新签名。
+
+这些检查覆盖离线页面、模拟接口、真实浏览器进程与平台启动器；本次测试未使用学校账号，未创建或支付真实订单。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 未单独实测；学校实时排期与网络表现需以实际使用为准。
