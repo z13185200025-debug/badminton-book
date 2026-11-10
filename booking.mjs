@@ -136,7 +136,7 @@ try {
     } else {
       if(existing.action==='create') {
         const requestedCandidates=candidates;
-        const router=await createVenueRouter(page,requestedCandidates,{log,onPage:p=>observeRequests(p,log)});
+        const router=await createVenueRouter(page,requestedCandidates,{log,onPage:p=>observeRequests(p,log),warmAlternates:scheduled});
         candidates=router.targets;
         if(candidates.length){target=candidates[0];page=await router.pageFor(target);}
         let releaseDeadline;

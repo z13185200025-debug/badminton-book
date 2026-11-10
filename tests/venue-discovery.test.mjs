@@ -116,6 +116,19 @@ test('catalog refresh uses the school request helper instead of replaying an exp
   assert.equal(await page.evaluate(()=>window.helperCalls),1);
  });
 });
+test('scheduled preheat warms both known halls without making inactive routes eligible or rereading their notice at release',async()=>{
+ await fixture(async(page,state)=>{
+  state.entries=[entry(1)];const router=await createVenueRouter(page,[target()],{warmAlternates:true});
+  assert.deepEqual(router.targets.map(t=>t.venueId),[1]);
+  assert.ok(state.requests.includes('/venue/venue-reservation/346'));
+  assert.ok(!state.requests.some(p=>p.includes('searchDate='+date)));
+  const loads=state.requests.filter(p=>p.startsWith('/venue/venue-reservation/')).length;
+  state.entries=[entry(346)];await router.refresh({force:true});
+  assert.deepEqual(router.targets.map(t=>t.venueId),[346]);
+  assert.equal(state.requests.filter(p=>p.startsWith('/venue/venue-reservation/')).length,loads,'already-read notice must not be opened again');
+  assert.equal(await (await router.pageFor(router.targets[0])).evaluate(()=>window.clicks),0);
+ });
+});
 test('08:00 system prompt is a deferred preheat, then refreshed schedule can be selected after release',async()=>{
  await fixture(async(page,state)=>{
   state.gate=true;const events=[];await prewarmVenue(page,target(),{log:(event,details)=>events.push({event,...details})});
