@@ -48,7 +48,7 @@ node node_modules/playwright-core/cli.js install chromium
 | Ubuntu 26.04.1 | 74 通过、0 失败、0 跳过 | Linux 界面与 shell 入口通过 |
 | macOS 26.7.2 ARM64 | 74 通过、0 失败、0 跳过 | 三个 ZIP 的通用界面通过 |
 
-CI 使用 Node.js 22.23.4、Chromium 151.0.7922.34。发布 ZIP 分别来自对应系统 CI：Mac 223 个文件，Windows/Linux 各 219 个文件；逐文件 SHA-256 与源码一致（Windows 的部分界面/说明文件只有平台换行差异）。Mac 原生启动器与原安装版逐字节相同；本次原生窗口重启检查尚未完成，通用界面已通过。
+CI 使用 Node.js 22.23.4、Chromium 151.0.7922.34。发布 ZIP 分别来自对应系统 CI：Mac 223 个文件，Windows/Linux 各 219 个文件；逐文件 SHA-256 与源码一致（Windows 的部分界面/说明文件只有平台换行差异）。Mac 原生启动器与原安装版逐字节相同。11 月 11 日在本机完成原生应用关闭、更新与重开核验：新增目录计数和目标日期排期场号已显示，两个账号设置与登录资料保留，界面保持待机，未启动预约。
 
 最终本地及三系统测试、发布包清单与 SHA-256 以 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/SHA256SUMS.txt) 为准。包内说明生成于 CI 前。
 
