@@ -38,7 +38,19 @@ node node_modules/playwright-core/cli.js install chromium
 
 2026-11-10 使用已有登录状态进行了只读页面检查：从篮球场旧入口 346 启动，目录仅列训练场 1；最终仅生成训练场 1–4 号候选。所有非 GET/HEAD 请求均被禁止，未提交、支付或取消任何订单。排期查询和只读检查成功不代表实际放号抢订成功。
 
-Windows、Linux、macOS 的原生 CI 会在发布前对同一提交运行完整测试，并构建、解压和启动对应发布包。最终运行链接、测试数量及下载校验值以本版 Release 附件 `TEST-RESULTS.md` 和 `SHA256SUMS.txt` 为准。包内本页生成于 CI 之前。
+源码提交 `80def61fedb6cace6744f85ad625568f6e912b90` 的 [三系统 CI](https://github.com/z13185200025-debug/badminton-book/actions/runs/42736556879) 已全部完成并通过：
+
+| 原生环境 | 回归 | 解压启动与关闭 |
+| --- | --- | --- |
+| Windows Server 2025 | 68 通过、0 失败、0 跳过 | Windows 界面与 `.cmd` 入口通过 |
+| Ubuntu 26.04.1 | 68 通过、0 失败、0 跳过 | Linux 界面与 `.sh` 入口通过 |
+| macOS 26.7.2 ARM64 | 68 通过、0 失败、0 跳过 | 三系统 ZIP 的通用界面通过 |
+
+CI 均使用 Node.js 22.23.4 与 Chromium 151.0.7922.34。Mac 原生 `.app` 另在用户本机完成实际打开、关闭、重开检查，界面显示新增技术字段且仍为空闲，两个账号的时段与 Pay 偏好保留。
+
+发布 ZIP 分别来自各自原生 CI：Mac 222 个文件，Windows/Linux 各 218 个文件。所有文件按清单核验。Windows 的 SVG/HTML/CSS/TXT 只有平台换行差异，运行代码与测试提交一致。此后补充测试记录的文档提交不改变运行代码。
+
+[完整测试报告](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/TEST-RESULTS.md) · [下载校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/SHA256SUMS.txt)。包内说明生成于 CI 前，最终结果以这些记录为准。
 
 Mac 1.4.0 包包含更新的脚本及界面，原生启动器二进制和签名文件逐项保持一致。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 未单独实测；不以离线测试宣称固定抢订秒数。
 
