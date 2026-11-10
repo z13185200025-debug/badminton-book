@@ -6,7 +6,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {interfaceDefaults,makeInterfacePlan} from '../lib/ui-plan.mjs';
 import {recordRunEvent,stageLabels} from '../lib/ui-telemetry.mjs';
-import {venueInfo} from '../lib/venues.mjs';
+import {configuredVenue} from '../lib/venues.mjs';
 import {accountPaths,accountConfig,createAccountStore,MAX_ACCOUNTS} from '../lib/accounts.mjs';
 import {requestWorkerStop,forceWorkerStop} from '../lib/process-control.mjs';
 
@@ -64,7 +64,7 @@ export async function createInterfaceServer({projectRoot=root,worker,token=rando
     const argv=[path.join(projectRoot,'booking.mjs'),plan.command,'--config',snapshot];
     if(plan.date)argv.push('--date',plan.date);if(plan.releaseAt)argv.push('--at',plan.releaseAt);
     const kind=plan.command==='login'?'login':'booking';
-    const run={id,accountId:account.id,accountLabel:account.label,kind,stage:'starting',message:kind==='login'?'正在打开学校登录页':'正在启动本次预约',running:true,startedAt:new Date().toISOString(),date:plan.date||null,slot:plan.config.candidates?.[0]?.slot,autoPay:kind==='booking'&&plan.config.autoPay===true,releaseAt:plan.releaseAt||null,bookingDelayMs:plan.config.bookingDelayMs??2000,candidates:plan.config.candidates,events:[],venueId:plan.config.venueId,venueName:venueInfo(plan.config.venueId).name};
+    const run={id,accountId:account.id,accountLabel:account.label,kind,stage:'starting',message:kind==='login'?'正在打开学校登录页':'正在启动本次预约',running:true,startedAt:new Date().toISOString(),date:plan.date||null,slot:plan.config.candidates?.[0]?.slot,autoPay:kind==='booking'&&plan.config.autoPay===true,releaseAt:plan.releaseAt||null,bookingDelayMs:plan.config.bookingDelayMs??2000,candidates:plan.config.candidates,events:[],venueId:plan.config.venueId,venueName:configuredVenue(plan.config).name};
     if(plan.releaseAt){run.preheatAt=new Date(Date.parse(plan.releaseAt)-300000).toISOString();run.plannedStartAt=new Date(Date.parse(plan.releaseAt)+run.bookingDelayMs).toISOString();}
     runs.set(account.id,run);
     const launcher=worker||((args)=>spawn(process.execPath,args,{cwd:projectRoot,stdio:['ignore','pipe','pipe','ipc'],windowsHide:true}));

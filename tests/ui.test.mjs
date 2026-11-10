@@ -18,7 +18,7 @@ test('manual interface defaults to day after tomorrow at 19:00 and never arms it
   const defaults=interfaceDefaults(config,now);
   assert.equal(defaults.date,'2026-11-07');assert.equal(defaults.slot,'19:00-20:00');assert.equal(defaults.mode,'now');assert.equal(defaults.autoPay,false);
   assert.equal(defaults.bookingDelayMs,2000);
-  assert.equal(defaults.venueId,346);assert.equal(defaults.availableCourts.length,9);assert.equal(defaults.courts.at(-1),'No.9');
+  assert.equal(defaults.venueId,1);assert.equal(defaults.venueMode,'auto');assert.equal(defaults.availableCourts.length,9);assert.equal(defaults.courts.at(-1),'No.9');
   const wait=makeInterfacePlan(config,{...defaults,mode:'release',date:'2026-11-08'},now);
   assert.equal(wait.command,'at');assert.equal(wait.releaseAt,'2026-11-06T00:00:00.000Z');
   const actual=executionSchedule(wait.command,['--at',wait.releaseAt],wait.config,now,shanghaiDate,nextRelease);
@@ -108,10 +108,12 @@ test('interface edits candidates and starts only after the button; stops after u
     assert.equal(f.calls.length,0);
     assert.equal(await page.locator('#auto-pay').isChecked(),false);
     assert.equal(await page.getByLabel('选场前延迟（秒）').inputValue(),'2');
-    assert.match(await page.locator('#venue-name').innerText(),/篮球馆/);
+    assert.match(await page.locator('#venue-name').innerText(),/自动识别.*训练场.*篮球场/);
     assert.equal(await page.getByRole('button',{name:'移除 9 号场',exact:true}).count(),1);
     assert.doesNotMatch(await page.locator('body').innerText(),/留一小时|去打球|安排你的下一场/);
+    const chosenDate=await page.locator('#date').inputValue();
     await page.getByRole('radio',{name:/本次等到/}).check();
+    assert.equal(await page.locator('#date').inputValue(),chosenDate,'changing execution mode must preserve the requested date');
     assert.match(await page.locator('#schedule-note').innerText(),/仅本次等待/);
     assert.match(await page.locator('#schedule-note').innerText(),/08:00:02/);
     await page.getByRole('radio',{name:/现在开始/}).check();

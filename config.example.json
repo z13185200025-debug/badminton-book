@@ -1,6 +1,8 @@
 {
   "origin": "https://hzsm.buaa.edu.cn",
-  "venueId": 346,
+  "venueId": 1,
+  "venueMode": "auto",
+  "venuePriority": [1, 346],
   "accountName": "",
   "candidates": [
     {

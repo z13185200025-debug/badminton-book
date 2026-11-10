@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {shanghaiDate,candidateTargets,decideExistingCandidates,nextRelease} from './lib/safety.mjs';
-import {readOrders,readOrdersWithSessionRefresh,openVenue,prewarmVenue,refreshAvailability,prepareSelection,createOrder,openPayment,verifyBooking,reconcileSubmittedOrder} from './lib/booking.mjs';
+import {readOrders,readOrdersWithSessionRefresh,openVenue,refreshAvailability,prepareSelection,createOrder,openPayment,verifyBooking,reconcileSubmittedOrder} from './lib/booking.mjs';
 import {waitForPaymentReady} from './lib/payment.mjs';
 import {observeRequests} from './lib/diagnostics.mjs';
 import {reduceVisualDelay} from './lib/browser.mjs';
@@ -14,6 +14,7 @@ import {accountPaths} from './lib/accounts.mjs';
 import {browserOptions} from './lib/platform.mjs';
 import {installWorkerStop} from './lib/process-control.mjs';
 import {keepAwake} from './lib/keep-awake.mjs';
+import {createVenueRouter,existingVenueCandidates} from './lib/venue-router.mjs';
 
 const root=import.meta.dirname;
 process.umask(0o077);
@@ -121,7 +122,8 @@ try {
     observeRequests(ordersPage,log);
     const orders=await readOrdersWithSessionRefresh(ordersPage,target,log);
     if(config.headless===false)await page.bringToFront();
-    const existing=decideExistingCandidates(orders,candidates);
+    let orderCandidates=existingVenueCandidates(candidates);
+    const existing=decideExistingCandidates(orders,orderCandidates);
     target=existing.target;
     status.target={date,court:target.court,slot:target.slot,amount:0};
     await setStatus('orders_checked',{existingAction:existing.action});
@@ -133,9 +135,12 @@ try {
       await setStatus('already_booked',{order});succeeded=true;
     } else {
       if(existing.action==='create') {
+        const requestedCandidates=candidates;
+        const router=await createVenueRouter(page,requestedCandidates,{log,onPage:p=>observeRequests(p,log)});
+        candidates=router.targets;
+        if(candidates.length){target=candidates[0];page=await router.pageFor(target);}
         let releaseDeadline;
         if(scheduled) {
-          await prewarmVenue(page,target,{log});
           const release=releaseAt.getTime();
           await setStatus('preheated',{release:new Date(release).toISOString()});
           const waitStarted=performance.now();
@@ -143,26 +148,32 @@ try {
           log('release_reached',{waitMs:Math.round(performance.now()-waitStarted),clockLatenessMs:Date.now()-release});
           releaseDeadline=release+config.releaseWindowSeconds*1000;
         }
-        if(!scheduled)await openVenue(page,target,{log});
         await waitForBookingStart({releaseAt:scheduled?releaseAt.getTime():null,delayMs:bookingDelayMs(config),log,stopped:()=>stopping});
         if(releaseDeadline&&Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
-        let acquired=false,needsRefresh=false,captchaSubmissionRetries=0;
-        if(scheduled) {
-          const releasedDate=page.locator('.date_box > div').filter({has:page.getByText(target.date.slice(5).replace('-','/'),{exact:true})});
-          needsRefresh=await releasedDate.count()!==1 || (await releasedDate.getAttribute('class'))?.split(/\s/).includes('active');
-        }
+        await router.refresh({force:true});candidates=router.targets;
+        orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
+        let acquired=false,needsRefresh=scheduled,captchaSubmissionRetries=0,venueRefreshes=0;
         while(!acquired) {
-          if(needsRefresh)await refreshAvailability(page,target,{log});
+          if(stopping)throw new Error('本次任务已停止');
+          await router.refresh();candidates=router.targets;
+          orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
+          const refreshRound=needsRefresh,refreshed=new Set(),unavailableVenues=new Set();
           needsRefresh=false;
-          let dateNotOpen=false,retryFreshCaptcha=false;
+          let dateNotOpen=!candidates.length,retryFreshCaptcha=false,venueChanged=false;
           for(const [index,candidate] of candidates.entries()) {
+            if(unavailableVenues.has(candidate.venueId))continue;
             target=candidate;
-            status.target={date,court:target.court,slot:target.slot,amount:0};
-            log('candidate_try',{court:target.court,slot:target.slot,index:index+1,total:candidates.length});
-            try {await prepareSelection(page,target,{log});}
+            status.target={date,court:target.court,slot:target.slot,amount:0,venueId:target.venueId,venueName:target.venueName};
+            log('candidate_try',{venueId:target.venueId,venueName:target.venueName,court:target.court,slot:target.slot,index:index+1,total:candidates.length});
+            try {
+              page=await router.pageFor(target);
+              if(refreshRound&&!refreshed.has(target.venueId)){await refreshAvailability(page,target,{log});refreshed.add(target.venueId);}
+              await prepareSelection(page,target,{log});
+            }
             catch(error) {
               if(error.code==='UNAVAILABLE'){log('candidate_unavailable',{court:target.court});continue;}
-              if(['DATE_NOT_OPEN','DATE_EMPTY'].includes(error.code)){log('date_unavailable',{reason:error.message});dateNotOpen=true;break;}
+              if(['DATE_NOT_OPEN','DATE_EMPTY','RELEASE_NOT_OPEN','VENUE_UNAVAILABLE'].includes(error.code)){log('date_unavailable',{venueId:target.venueId,reason:error.message});dateNotOpen=true;unavailableVenues.add(target.venueId);continue;}
+              if(['VENUE_CHANGED','VENUE_MOVED','VENUE_IDENTITY_CONFLICT'].includes(error.code)){log('venue_recheck_required',{venueId:target.venueId,reason:error.message});venueChanged=true;unavailableVenues.add(target.venueId);continue;}
               throw error;
             }
             await setStatus('selection_verified');
@@ -195,7 +206,7 @@ try {
               // Explicit CAPTCHA rejection can receive one fresh challenge after
               // confirming there is no order. Never reuse the rejected proof.
               log('submission_reconcile',{court:target.court,reason:error.message});
-              const observed=decideExistingCandidates(await readOrders(ordersPage,target),candidates);
+              const observed=decideExistingCandidates(await readOrders(ordersPage,target),orderCandidates);
               if(observed.action!=='create') {
                 target=observed.target;order=observed.order;
                 status.target={date,court:target.court,slot:target.slot,amount:0};
@@ -214,6 +225,7 @@ try {
           }
           if(retryFreshCaptcha)continue;
           if(!acquired) {
+            if(venueChanged&&venueRefreshes++<3&&await router.refresh({force:true})){needsRefresh=true;continue;}
             if(!scheduled||Date.now()>=releaseDeadline)throw new Error(dateNotOpen?'目标日期尚未开放或暂无场次，停止本次运行':'所有候选场地均不可用，停止本次运行');
             log(dateNotOpen?'waiting_for_date_release':'waiting_for_candidate');
             await delay(Number.isFinite(config.releasePollIntervalMs)?Math.min(2000,Math.max(250,config.releasePollIntervalMs)):500);
@@ -222,7 +234,7 @@ try {
         }
       }
       if(!succeeded) {
-        const current=submittedNumber?await reconcileSubmittedOrder(ordersPage,candidates,submittedNumber,log):decideExistingCandidates(await readOrders(ordersPage,target),candidates);
+        const current=submittedNumber?await reconcileSubmittedOrder(ordersPage,orderCandidates,submittedNumber,log):decideExistingCandidates(await readOrders(ordersPage,target),orderCandidates);
         target=current.target;
         status.target={date,court:target.court,slot:target.slot,amount:0};
         if(current.action==='create') throw new Error('提交后没有有效订单，停止，避免盲目重试');

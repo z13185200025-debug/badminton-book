@@ -1,20 +1,19 @@
-# Mac 使用说明（保留原版）
+# Mac 使用说明
 
-[下载 Mac 1.2.0-rc.1 原版 ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.3.0/buaa-badminton-1.2.0-rc.1-macos.zip)
+[下载 Mac 1.4.0 ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/badminton-book-1.4.0-macos.zip)
 
-本次发布保留原来的 Mac 安装包，未重编译、重签名或改写任何字节。现有 Mac 用户可继续使用原来的目录和应用，无需覆盖升级。Mac ZIP 的 SHA-256：
+本版更新场馆自动识别、脚本、界面与说明。原生 `.app` 启动器保持原有字节和签名，未重新编译或重新签名。
 
-```text
-5dc2e3c68d2bb0f610fb2db6d19ead494fb348e8c70661f7616d58916c783ff8
-```
+新电脑需要 macOS 13+、[Node.js 22+](https://nodejs.org/en/download) 和 [Google Chrome](https://www.google.com/chrome/)。原生启动器同时包含 Apple Silicon 与 Intel 架构，Node.js 与 Chrome 需匹配本机。
 
-新电脑需要 macOS 13 或更新版本、[Node.js 22+](https://nodejs.org/en/download) 和 [Google Chrome](https://www.google.com/chrome/)。原版 native launcher 同时包含 Apple Silicon 与 Intel 架构，Node.js 与 Chrome 需匹配本机。
+1. 解压完整 ZIP 到自己可写的目录，保留 `.app` 旁边的所有文件，不能只移动 `.app`。
+2. 双击 `羽毛球预约助手.app`，或 `打开预约助手.command`。
+3. 如系统询问访问文件夹，由本人确认权限。应用未使用 Apple Developer ID 公证；系统阻止时先核对来源和 Release 中的 SHA-256，按 macOS 提供的正常“打开”流程处理。
+4. 在“账号与登录”填写学校网页显示的姓名，在独立 Chrome 窗口中完成首次登录，可自行使用 Mac 密码本。
+5. 设置每个账号的时段与候选场地，核对预约日期。选择现在开始或本次等到 08:00，再点击开始。自动零元 Pay 是每个账号独立的可选项。
 
-1. 解压完整 ZIP 到自己可写的目录，保留 `.app` 旁边的所有文件。不能只把 `.app` 单独移到“应用程序”。
-2. 双击 `羽毛球预约助手.app`，也可使用 `打开预约助手.command`。
-3. 若 macOS 询问该应用是否访问所在文件夹，由本人确认权限。应用未使用 Apple Developer ID 公证；系统阻止时，请先核对来源和 SHA-256，再按 macOS 提供的正常“打开”流程处理，不要全局关闭系统安全保护。
-4. 在“账号与登录”填写学校网页显示的姓名，在独立 Chrome 窗口中完成首次登录，可自行使用 Mac 密码本。然后核对日期、时段和 Pay 设置，点击开始。
+不会创建每日任务；打开助手默认空闲，点击开始才执行这一次。保持 Mac 开盖接电、联网且应用运行。可以熄屏，合盖休眠无法保证准时执行。
 
-后续操作、多个账号设置和技术日志均保留原有行为，详细说明也在 Mac ZIP 内的 `使用说明.html` 和 `使用说明.txt`。不设置每日任务；每次使用由本人开启。保持 Mac 开盖接电、联网且应用打开。可以熄屏，合盖休眠无法保证准时执行。
+现有用户升级：先关闭助手并备份整个旧目录，将新包解压到新目录。可在同一台 Mac 上复制旧目录的 `config.json` 和整个 `.state/` 到新目录以保留账号与本机登录资料；不要同时打开新旧两份，也不要把这些私有文件分享给别人。本版未配置 `venueMode` 的旧配置也默认使用自动识别，旧 `venueId=346` 只是初始入口。换电脑请重新登录。
 
-发布目录中的 Windows / Linux 文件无需复制到现有 Mac 安装目录，Mac 用户也无需运行 `npm run app:build`。
+无需运行 `npm run app:build`。本次针对原安装目录的更新只替换脚本、界面、依赖与文档，保留原生应用、账号资料及用户选择。

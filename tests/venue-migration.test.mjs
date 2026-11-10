@@ -12,7 +12,7 @@ const target={...config,date:'2026-11-11',court:'No.9',slot:'19:00-20:00'};
 test('only verified badminton venues and their own court ranges are accepted',()=>{
   assert.equal(venueInfo(346).courtCount,9);assert.equal(venueInfo(1).courtCount,4);
   assert.equal(validateTarget(target,target.date,new Date('2026-11-09T08:00:00+08:00')).court,'No.9');
-  for(const changed of [{venueId:999},{venueId:1,court:'No.9'},{court:'No.10'},{maxAmount:1}])assert.throws(()=>validateTarget({...target,...changed},target.date,new Date('2026-11-09T08:00:00+08:00')));
+  for(const changed of [{venueId:999},{venueMode:'fixed',venueId:1,court:'No.9'},{court:'No.10'},{maxAmount:1}])assert.throws(()=>validateTarget({...target,...changed},target.date,new Date('2026-11-09T08:00:00+08:00')));
 });
 test('mixed live court suffixes identify full numbers without conflating No.1 and No.10',()=>{
   for(const label of ['No.9','No.9（Basketball Hall）','No.9（Badminton Training Hall）','No.9 (篮球馆)']) {

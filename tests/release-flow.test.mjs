@@ -31,7 +31,7 @@ test('preheated release waits two seconds before querying the newly opened date 
   const target={origin:'https://hzsm.buaa.edu.cn',venueId:1,accountName:'测试用户',date:'2026-11-07',court:'No.1',slot:'12:00-13:00',autoPay:false,captchaTimeoutSeconds:10,maxCaptchaAttempts:1};
   let released=false,venueLoads=0,protocolLoads=0,submits=0,captchaChecks=0;
   const dateRequests=[],images=puzzle();
-  const html=`<meta charset="utf-8">Welcome! 测试用户
+  const html=`<meta charset="utf-8">Welcome! 测试用户 Badminton Gymnasium（Badminton Training Hall）
     <div class="date_box"></div><div class="spaceTable"><table><thead><tr><td>Venue</td><td>12:00-13:00</td></tr></thead><tbody></tbody></table></div>
     <div id="selection"></div><input placeholder="请输入手机号" value="13000000000">
     <label class="text-left"><input type="checkbox">Read</label><div class="action"><p><b>0.00</b></p><button class="btn">Submit</button></div>

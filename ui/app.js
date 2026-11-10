@@ -54,6 +54,12 @@ function renderTechnical(run){
   const candidate=run.candidate;
   const rows=[
     ['预约场馆',hasRun?run.venueName:current.defaults.venueName],
+    ['场馆目录',run.venueCatalog?run.venueCatalog.map(v=>`${v.id} · ${v.name}`).join(' / ')||'暂无可预约场馆':'运行时从学校目录确认'],
+    ['场地 / 上级场馆 / 校区 / 运动',run.venueEvidence?`${run.venueId} / ${run.venueEvidence.parentVenueId} / ${run.venueEvidence.campusId} / ${run.venueEvidence.sportType}`:'—'],
+    ['排期场地 ID / 时段 ID',run.schedule?.spaceId?`${run.schedule.spaceId} / ${run.schedule.timeId}`:'—'],
+    ['接口可预约日期',run.schedule?.availableDates?.join('、')||'放号后核对，保留所选日期'],
+    ['场地数量 / 放号小时',run.venueEvidence?`${run.venueEvidence.courtCount??'待查'} / ${run.venueEvidence.reservationHour??'待查'}`:'—'],
+    ['预约须知代码',run.venueEvidence?.protocol||'—'],
     ['预热时间',scheduled?clockText(preheat):'启动后准备页面'],
     ['放号基准',release?clockText(release):'立即模式'],
     ['计划选场',planned?clockText(planned):`页面就绪 + ${seconds(delayMs)}`],
@@ -163,7 +169,7 @@ $('#date').addEventListener('change',updateSummary);
 $('#slot').addEventListener('change',()=>{fallbacks=fallbacks.filter(slot=>slot!==$('#slot').value);renderFallbacks();updateSummary();stashDraft();renderAccounts();});
 $('#booking-delay').addEventListener('input',()=>{if($('#booking-delay').validity.valid){updateSummary();stashDraft();}});
 for(const id of ['#auto-pay','#visible'])$(id).addEventListener('change',()=>{stashDraft();renderAccounts();});
-for(const radio of document.querySelectorAll('input[name=mode]'))radio.addEventListener('change',()=>{$('#date').value=radio.value==='release'?current.defaults.nextReleaseTarget:current.defaults.date;updateSummary();});
+for(const radio of document.querySelectorAll('input[name=mode]'))radio.addEventListener('change',()=>{updateSummary();});
 $('#restore-courts').addEventListener('click',()=>{courts=[...current.defaults.availableCourts];renderCourts();stashDraft();renderAccounts();});
 $('#add-fallback').addEventListener('click',()=>{const value=$('#fallback-slot').value;if(value!==$('#slot').value&&!fallbacks.includes(value)&&fallbacks.length<6){fallbacks.push(value);renderFallbacks();stashDraft();renderAccounts();}});
 function openSettings(id=selectedId){

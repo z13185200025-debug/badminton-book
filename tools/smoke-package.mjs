@@ -14,7 +14,7 @@ let desktop;
 try {
   for(const [name,bytes] of Object.entries(entries)){
     const filename=path.join(directory,name);await fs.mkdir(path.dirname(filename),{recursive:true});await fs.writeFile(filename,bytes);
-    if(filename.endsWith('.sh'))await fs.chmod(filename,0o755);
+    if(/\.(sh|command)$|\.app[/\\]Contents[/\\]MacOS[/\\]/.test(filename))await fs.chmod(filename,0o755);
   }
   const unpacked=path.join(directory,manifest.name);
   const {startDesktop}=await import(pathToFileURL(path.join(unpacked,'tools/start-app.mjs')));

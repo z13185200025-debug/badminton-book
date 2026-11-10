@@ -6,9 +6,9 @@ import {zipSync,unzipSync} from 'fflate';
 
 const root=path.resolve(import.meta.dirname,'..');
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
-export const releaseFiles=['booking.mjs','package.json','package-lock.json','config.example.json','README.md','THIRD_PARTY_NOTICES.md'];
+export const releaseFiles=['booking.mjs','package.json','package-lock.json','config.example.json','README.md','THIRD_PARTY_NOTICES.md','使用说明.html','使用说明.txt','发布说明.txt'];
 export const releaseDirectories=['lib','tests','ui','docs'];
-export const releaseTools=['start-app.mjs','ui-server.mjs','test.mjs','package-release.mjs','smoke-package.mjs'];
+export const releaseTools=['start-app.mjs','ui-server.mjs','test.mjs','package-release.mjs','smoke-package.mjs','run-node.sh'];
 const privatePath=/(?:^|\/)(?:\.state|artifacts|config\.json|config\.previous\.json|\.env(?:\.[^/]*)?)(?:\/|$)/;
 
 export function verifyArchive(bytes) {
@@ -29,7 +29,7 @@ export function verifyArchive(bytes) {
 }
 
 export async function createPortableArchive({projectRoot=root,platform,outDir=path.join(projectRoot,'release')}={}) {
-  if(!['windows','linux'].includes(platform))throw new Error('此打包器仅用于 Windows / Linux；Mac 使用保留的原始安装包');
+  if(!['windows','linux','macos'].includes(platform))throw new Error('仅支持 macos、windows、linux');
   const pkg=JSON.parse(await fs.readFile(path.join(projectRoot,'package.json'),'utf8'));
   const name=`badminton-book-${pkg.version}-${platform}`,archive=path.join(outDir,name+'.zip');
   const inputs=[...releaseFiles,...releaseTools.map(file=>'tools/'+file),'start-windows.cmd','start-linux.sh'];
@@ -40,12 +40,13 @@ export async function createPortableArchive({projectRoot=root,platform,outDir=pa
     else inputs.push(relative);
   }
   for(const directory of [...releaseDirectories,...Object.keys(pkg.dependencies).map(name=>'node_modules/'+name)])await walk(directory);
+  if(platform==='macos'){inputs.push('打开预约助手.command');await walk('羽毛球预约助手.app');}
   const entries={},records=[];
   for(const relative of [...new Set(inputs)].sort()) {
     if(privatePath.test(relative))throw new Error('发布包含本机私有数据');
     const filename=path.join(projectRoot,relative),stat=await fs.lstat(filename);
     if(!stat.isFile()||stat.isSymbolicLink())throw new Error(`发布文件必须是普通文件：${relative}`);
-    const data=await fs.readFile(filename),mode=relative.endsWith('.sh')?0o100755:0o100644;
+    const data=await fs.readFile(filename),mode=/\.(sh|command)$|\.app\/Contents\/MacOS\//.test(relative)?0o100755:0o100644;
     if(!relative.startsWith('node_modules/')&&data.includes(Buffer.from(projectRoot)))throw new Error(`发布文件包含本机绝对路径：${relative}`);
     entries[`${name}/${relative}`]=[data,{os:3,attrs:(mode<<16)>>>0}];
     records.push({path:relative,bytes:data.length,sha256:digest(data)});
@@ -61,5 +62,5 @@ export async function createPortableArchive({projectRoot=root,platform,outDir=pa
 
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {
   const selected=process.argv[2]||'all';
-  for(const platform of selected==='all'?['windows','linux']:[selected])console.log(JSON.stringify(await createPortableArchive({platform})));
+  for(const platform of selected==='all'?['macos','windows','linux']:[selected])console.log(JSON.stringify(await createPortableArchive({platform})));
 }

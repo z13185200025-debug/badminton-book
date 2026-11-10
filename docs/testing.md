@@ -10,8 +10,9 @@
 npm ci
 npm test
 npm run package
-node tools/smoke-package.mjs release/badminton-book-1.3.0-windows.zip
-node tools/smoke-package.mjs release/badminton-book-1.3.0-linux.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.0-macos.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.0-windows.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.0-linux.zip
 ```
 
 测试默认使用本机 Chrome / Chromium，Windows 无 Chrome 时使用 Edge。CI 使用与 Playwright 匹配的 Chromium：
@@ -31,19 +32,14 @@ node node_modules/playwright-core/cli.js install chromium
 - Windows / Linux 浏览器检测、中文及空格目录、IPC 停止、关闭窗口清理。
 - ZIP 清单与每个文件 SHA-256、私有数据排除、解压后初始空账号和手动启动状态。
 
-## 1.3.0 实际验证结果
+## 1.4.0 验证记录
 
-2026-11-09，代码提交 `7bf3261578a2e9cb9df989b7b151fa0f15fee99e` 的 [三系统 CI](https://github.com/z13185200025-debug/badminton-book/actions/runs/42561607608) 全部通过。
+本地 Mac 回归：67 项通过，0 失败、0 跳过。新增测试涵盖目录与详情字段冲突、新旧场馆双向切换、新官方 ID、旧页面仍显示零元、08:00 前提示与连续弹窗、网站请求签名更新、排期及提交参数绑定、旧场馆订单去重，以及切换开始方式时保留预约日期。
 
-| 原生运行环境 | Node.js / 浏览器 | 回归测试 | 解压启动验证 |
-| --- | --- | --- | --- |
-| Windows Server 2025，GitHub Windows 运行器 | 22.23.4 / Chromium 151.0.7922.34 | 57 通过，0 失败，0 跳过 | Windows ZIP 与 `.cmd` 入口均通过，正常关闭后进程清理完成 |
-| Ubuntu 24.04，GitHub Linux 运行器 | 22.23.4 / Chromium 151.0.7922.34 | 57 通过，0 失败，0 跳过 | Linux ZIP 与 `.sh` 入口均通过，使用 Xvfb 显示环境 |
-| macOS 26.7.2 ARM64，GitHub Mac 运行器 | 22.23.4 / Chromium 151.0.7922.34 | 57 通过，0 失败，0 跳过 | 两种通用 ZIP 均可解压、打开界面并正常关闭 |
-| 开发用 Mac，本地 Chrome | Node.js 26.3.0 | 57 通过，0 失败，0 跳过 | 中文/空格目录、真实窗口启动关闭通过 |
+2026-11-10 使用已有登录状态进行了只读页面检查：从篮球场旧入口 346 启动，目录仅列训练场 1；最终仅生成训练场 1–4 号候选。所有非 GET/HEAD 请求均被禁止，未提交、支付或取消任何订单。排期查询和只读检查成功不代表实际放号抢订成功。
 
-发布的 Windows / Linux ZIP 直接采用各自原生 CI 构建并验证过的文件。包内说明生成于测试前，最终测试结果以本页及 Release 记录为准。此后的文档提交只补充测试结果，运行代码保持上述测试版本。
+Windows、Linux、macOS 的原生 CI 会在发布前对同一提交运行完整测试，并构建、解压和启动对应发布包。最终运行链接、测试数量及下载校验值以本版 Release 附件 `TEST-RESULTS.md` 和 `SHA256SUMS.txt` 为准。包内本页生成于 CI 之前。
 
-Mac 下载保留原始 `1.2.0-rc.1` ZIP：SHA-256 与修改前一致，包内 183 个文件逐项校验通过；当前 Mac 安装目录的 45 个发布源码/启动器文件校验值也保持一致。原版应用未重编译或重新签名。
+Mac 1.4.0 包包含更新的脚本及界面，原生启动器二进制和签名文件逐项保持一致。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 未单独实测；不以离线测试宣称固定抢订秒数。
 
-这些检查覆盖离线页面、模拟接口、真实浏览器进程与平台启动器；本次测试未使用学校账号，未创建或支付真实订单。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 未单独实测；学校实时排期与网络表现需以实际使用为准。
+旧版 1.3.0 的 57 项跨平台记录保留在 [旧 Release](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.3.0)，不作为本次代码的测试结果。
