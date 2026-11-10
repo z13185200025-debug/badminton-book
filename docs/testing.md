@@ -40,6 +40,16 @@ node node_modules/playwright-core/cli.js install chromium
 
 2026-11-11 使用已有会话检查学校当前目录、须知和 11 月 12 日排期。只允许 GET/HEAD，未选场、提交、支付或取消订单。目录只有入口 346、总数为 5，排期返回 9 行；晚间检查的场次均不可预约。页面主程序与前一天相同，后台配置有变化。
 
+运行代码提交 `335b9c3d185eccf78b8b427da3299ef841d7aaac` 的 [三系统 CI](https://github.com/z13185200025-debug/badminton-book/actions/runs/42854722268) 已全部完成并通过：
+
+| 原生环境 | 回归 | 解压启动与关闭 |
+| --- | --- | --- |
+| Windows Server 2025 | 74 通过、0 失败、0 跳过 | Windows 界面与 cmd 入口通过 |
+| Ubuntu 26.04.1 | 74 通过、0 失败、0 跳过 | Linux 界面与 shell 入口通过 |
+| macOS 26.7.2 ARM64 | 74 通过、0 失败、0 跳过 | 三个 ZIP 的通用界面通过 |
+
+CI 使用 Node.js 22.23.4、Chromium 151.0.7922.34。发布 ZIP 分别来自对应系统 CI：Mac 223 个文件，Windows/Linux 各 219 个文件；逐文件 SHA-256 与源码一致（Windows 的部分界面/说明文件只有平台换行差异）。Mac 原生启动器与原安装版逐字节相同；本次原生窗口重启检查尚未完成，通用界面已通过。
+
 最终本地及三系统测试、发布包清单与 SHA-256 以 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/SHA256SUMS.txt) 为准。包内说明生成于 CI 前。
 
 依赖检查未报告已知漏洞；这不等于没有潜在缺陷。Playwright 存在较新版本，本修复保留已测试的 1.62.1，避免同时引入浏览器驱动行为变化。
