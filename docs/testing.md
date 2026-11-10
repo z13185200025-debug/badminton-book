@@ -10,9 +10,9 @@
 npm ci
 npm test
 npm run package
-node tools/smoke-package.mjs release/badminton-book-1.4.0-macos.zip
-node tools/smoke-package.mjs release/badminton-book-1.4.0-windows.zip
-node tools/smoke-package.mjs release/badminton-book-1.4.0-linux.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.1-macos.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.1-windows.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.1-linux.zip
 ```
 
 测试默认使用本机 Chrome / Chromium，Windows 无 Chrome 时使用 Edge。CI 使用与 Playwright 匹配的 Chromium：
@@ -32,26 +32,18 @@ node node_modules/playwright-core/cli.js install chromium
 - Windows / Linux 浏览器检测、中文及空格目录、IPC 停止、关闭窗口清理。
 - ZIP 清单与每个文件 SHA-256、私有数据排除、解压后初始空账号和手动启动状态。
 
-## 1.4.0 验证记录
+## 1.4.1 验证记录
 
-本地 Mac 回归：68 项通过，0 失败、0 跳过。新增测试涵盖目录与详情字段冲突、新旧场馆双向切换、新官方 ID、旧页面仍显示零元、08:00 前提示与连续弹窗、网站请求签名更新、双入口提前预热且不赋予旧入口预约资格、排期及提交参数绑定、旧场馆订单去重，以及切换开始方式时保留预约日期。
+本地 Mac 完整回归：74 项通过、0 失败、0 跳过。
 
-2026-11-10 使用已有登录状态进行了只读页面检查：从篮球场旧入口 346 启动，目录仅列训练场 1；最终仅生成训练场 1–4 号候选。所有非 GET/HEAD 请求均被禁止，未提交、支付或取消任何订单。排期查询和只读检查成功不代表实际放号抢订成功。
+本次增加：目录总数小于最大场号、初始入口 404 后只读恢复目录、固定入口禁止自动切馆、弹窗互相遮挡、普通须知提及开放时间、管理占用备注脱敏。保留原有身份/日期/零元金额/实际提交 ID 与重复订单保护测试。
 
-源码提交 `80def61fedb6cace6744f85ad625568f6e912b90` 的 [三系统 CI](https://github.com/z13185200025-debug/badminton-book/actions/runs/42736556879) 已全部完成并通过：
+2026-11-11 使用已有会话检查学校当前目录、须知和 11 月 12 日排期。只允许 GET/HEAD，未选场、提交、支付或取消订单。目录只有入口 346、总数为 5，排期返回 9 行；晚间检查的场次均不可预约。页面主程序与前一天相同，后台配置有变化。
 
-| 原生环境 | 回归 | 解压启动与关闭 |
-| --- | --- | --- |
-| Windows Server 2025 | 68 通过、0 失败、0 跳过 | Windows 界面与 `.cmd` 入口通过 |
-| Ubuntu 26.04.1 | 68 通过、0 失败、0 跳过 | Linux 界面与 `.sh` 入口通过 |
-| macOS 26.7.2 ARM64 | 68 通过、0 失败、0 跳过 | 三系统 ZIP 的通用界面通过 |
+最终本地及三系统测试、发布包清单与 SHA-256 以 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/SHA256SUMS.txt) 为准。包内说明生成于 CI 前。
 
-CI 均使用 Node.js 22.23.4 与 Chromium 151.0.7922.34。Mac 原生 `.app` 另在用户本机完成实际打开、关闭、重开检查，界面显示新增技术字段且仍为空闲，两个账号的时段与 Pay 偏好保留。
+依赖检查未报告已知漏洞；这不等于没有潜在缺陷。Playwright 存在较新版本，本修复保留已测试的 1.62.1，避免同时引入浏览器驱动行为变化。
 
-发布 ZIP 分别来自各自原生 CI：Mac 222 个文件，Windows/Linux 各 218 个文件。所有文件按清单核验。Windows 的 SVG/HTML/CSS/TXT 只有平台换行差异，运行代码与测试提交一致。此后补充测试记录的文档提交不改变运行代码。
+Mac 原生启动器不重编译、不重签名。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 需分别验证；离线测试不证明学校放号时的抢订结果或固定耗时。
 
-[完整测试报告](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/TEST-RESULTS.md) · [下载校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/SHA256SUMS.txt)。包内说明生成于 CI 前，最终结果以这些记录为准。
-
-Mac 1.4.0 包包含更新的脚本及界面，原生启动器二进制和签名文件逐项保持一致。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 未单独实测；不以离线测试宣称固定抢订秒数。
-
-旧版 1.3.0 的 57 项跨平台记录保留在 [旧 Release](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.3.0)，不作为本次代码的测试结果。
+旧版 1.4.0 的 68 项跨平台记录保留在 [旧 Release](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.0)，不作为本次代码的测试结果。

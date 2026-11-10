@@ -70,15 +70,15 @@ document.querySelector('.action .btn').onclick=()=>fetch('/venue-server/api/rese
 async function fixture(fn){
  const browser=await chromium.launch({...browserOptions(),headless:true});
  try{
-  const context=await browser.newContext();const state={entries:[entry()],gate:false,requests:[],writes:0};
+  const context=await browser.newContext();const state={entries:[entry()],gate:false,requests:[],writes:0,html,day,routeStatus:{}};
   await context.route('**/*',async route=>{
    const r=route.request(),u=new URL(r.url());state.requests.push(u.pathname+u.search);
    if(r.method()!=='GET'){state.writes++;return route.fulfill({json:{code:200,data:{tradeNo:'D999'}}});}
    if(u.pathname.includes('/campus/venue/info'))return route.fulfill({json:catalog(state.entries)});
    if(u.pathname.includes('/front/website/venue_sites/'))return route.fulfill({json:{code:200,data:entry(Number(u.pathname.split('/').at(-1)))}});
-   if(u.pathname.includes('/day/info'))return route.fulfill({json:state.gate?{code:400,message:'当日8点以后才能查看当天的预约'}:day(Number(u.searchParams.get('venueSiteId')),u.searchParams.get('searchDate'))});
+   if(u.pathname.includes('/day/info'))return route.fulfill({json:state.gate?{code:400,message:'当日8点以后才能查看当天的预约'}:state.day(Number(u.searchParams.get('venueSiteId')),u.searchParams.get('searchDate'))});
    if(u.pathname.includes('/protocols/'))return route.fulfill({json:{code:200}});
-   if(u.pathname.startsWith('/venue/venue-reservation/'))return route.fulfill({contentType:'text/html; charset=utf-8',body:html(Number(u.pathname.split('/').at(-1)))});
+   if(u.pathname.startsWith('/venue/venue-reservation/')){const id=Number(u.pathname.split('/').at(-1)),status=state.routeStatus[id]||200;return route.fulfill({status,contentType:'text/html; charset=utf-8',body:status===200?state.html(id):'Not found'});}
    return route.abort();
   });
   const page=await context.newPage();await fn(page,state);assert.equal(state.writes,0,'no order or other server write is allowed');
@@ -89,14 +89,43 @@ test('automatic routing handles basketball to training, the reverse, both active
   state.entries=[entry(346)];const events=[];
   const router=await createVenueRouter(page,[target(1),target(1,{court:'No.9'})],{log:(event,details)=>events.push({event,...details})});
   assert.deepEqual(router.targets.map(t=>[t.venueId,t.court]),[[346,'No.1'],[346,'No.9']]);
-  state.entries=[entry(1)];await router.refresh({force:true});assert.deepEqual(router.targets.map(t=>[t.venueId,t.court]),[[1,'No.1']]);
+  state.entries=[entry(1)];await router.refresh({force:true});assert.deepEqual(router.targets.map(t=>[t.venueId,t.court]),[[1,'No.1'],[1,'No.9']]);
   await prepareSelection(await router.pageFor(router.targets[0]),router.targets[0]);
   assert.equal(router.targets[0].scheduleCell.spaceId,1);
+  await assert.rejects(()=>prepareSelection(page.context().pages().find(p=>p.url().endsWith('/1')),router.targets[1]),e=>e.code==='UNAVAILABLE');
   state.entries=[entry(346)];await router.refresh({force:true});assert.equal(router.targets[0].venueId,346);
-  state.entries=[entry(346),entry(1)];await router.refresh({force:true});assert.deepEqual(router.targets.map(t=>t.venueId),[1,346,346]);
+  state.entries=[entry(346),entry(1)];await router.refresh({force:true});assert.deepEqual(router.targets.map(t=>t.venueId),[1,1,346,346]);
   state.entries=[entry(999)];await router.refresh({force:true});assert.equal(router.targets[0].venueId,999);
   state.entries=[];await router.refresh({force:true});assert.equal(router.targets.length,0);
   assert.ok(events.some(e=>e.event==='venue_catalog_checked'&&e.eligible[0]?.id===1));
+ });
+});
+test('catalog court count cannot exclude a higher numbered court verified in the actual date schedule',async()=>{
+ await fixture(async(page,state)=>{
+  state.entries=[entry(346,{spaceCount:5})];
+  state.html=id=>html(id).replaceAll('1号（篮球场）','9号（训练场）');
+  state.day=(id,d)=>{const body=day(id,d),row=body.data.reservationDateSpaceInfo[d][0];row.id=85;row.spaceName='9号（训练场）';row.enSpaceName='No.9（Badminton Training Hall）';return body;};
+  const router=await createVenueRouter(page,[target(346,{court:'No.9'})]);
+  assert.equal(router.entries[0].courtCount,5);assert.equal(router.targets.length,1);
+  const t=router.targets[0],selected=await router.pageFor(t);await prepareSelection(selected,t);
+  assert.equal(t.scheduleCell.spaceId,85);assert.equal(await selected.evaluate(()=>window.clicks),1);
+ });
+});
+test('removed saved route falls back read-only to current catalog and refreshes through the working page',async()=>{
+ await fixture(async(page,state)=>{
+  state.entries=[entry(346)];state.routeStatus[1]=404;
+  venueState(page).catalog=parseVenueCatalog(catalog([entry(1)]));
+  const router=await createVenueRouter(page,[target(1)]);
+  assert.deepEqual(router.targets.map(t=>t.venueId),[346]);
+  state.entries=[];await router.refresh({force:true});assert.equal(router.targets.length,0);
+  assert.equal(await page.locator('body').innerText(),'Not found');
+ });
+});
+test('fixed venue mode never switches to another hall when its saved route is removed',async()=>{
+ await fixture(async(page,state)=>{
+  state.entries=[entry(346)];state.routeStatus[1]=404;
+  await assert.rejects(()=>createVenueRouter(page,[target(1,{venueMode:'fixed'})]),e=>e.code==='VENUE_CATALOG_UNAVAILABLE');
+  assert.ok(!state.requests.includes('/venue/venue-reservation/346'));
  });
 });
 test('stale zero-price basketball page is never eligible when only training appears in official catalog',async()=>{
@@ -152,6 +181,14 @@ test('unknown popup is not acknowledged and a mismatched POST is blocked before 
 });
 test('UI diagnostics expose verified venue and schedule identities without copying other response fields',()=>{
  const run={events:[]};recordRunEvent(run,{event:'venue_detected',venueId:1,venueName:'羽毛球馆（训练场）',parentVenueId:1,campusId:187,sportType:156,phone:'private',token:'private'});
- recordRunEvent(run,{event:'schedule_verified',venueId:1,spaceId:1,timeId:500,availableDates:[date],requestedDate:date,token:'private'});
- assert.equal(run.venueId,1);assert.equal(run.schedule.timeId,500);assert.ok(!JSON.stringify(run).includes('private'));
+ recordRunEvent(run,{event:'schedule_verified',venueId:1,spaceId:1,timeId:500,availableDates:[date],requestedDate:date,rowCount:9,courts:['No.1','No.9'],token:'private'});
+ assert.equal(run.venueId,1);assert.equal(run.schedule.timeId,500);assert.equal(run.schedule.rowCount,9);assert.ok(!JSON.stringify(run).includes('private'));
+});
+test('schedule discovery excludes private occupation remarks while retaining migration and blocked states',()=>{
+ const body=day(),cell=body.data.reservationDateSpaceInfo[date][0][500];
+ cell.adminTake=true;cell.adminRemark='PRIVATE_PERSON_13000000000';body.data.isTakeUp=1;body.data.takeUpExplain='PRIVATE_PERSON_13000000000';
+ const parsed=parseDay(body);assert.ok(!JSON.stringify(parsed).includes('PRIVATE_PERSON'));assert.equal(parsed.blocked,true);assert.equal(parsed.rows[0].cells[0].blocked,true);
+ cell.adminRemark='PRIVATE_PERSON_13000000000：场馆迁移至训练场';body.data.isTakeUp=0;body.data.takeUpExplain='';
+ const migrated=parseDay(body);assert.ok(!JSON.stringify(migrated).includes('PRIVATE_PERSON'));
+ assert.throws(()=>verifyScheduleCell(migrated,target()),e=>e.code==='VENUE_MOVED');
 });

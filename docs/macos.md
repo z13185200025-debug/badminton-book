@@ -1,6 +1,6 @@
 # Mac 使用说明
 
-[下载 Mac 1.4.0 ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/badminton-book-1.4.0-macos.zip)
+[下载 Mac 1.4.1 ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/badminton-book-1.4.1-macos.zip)
 
 本版更新场馆自动识别、脚本、界面与说明。原生 `.app` 启动器保持原有字节和签名，未重新编译或重新签名。
 

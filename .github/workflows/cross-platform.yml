@@ -39,16 +39,16 @@ jobs:
         run: npm run package
       - name: Extract and run Linux package and shell launcher
         if: runner.os == 'Linux'
-        run: xvfb-run -a node tools/smoke-package.mjs release/badminton-book-1.4.0-linux.zip
+        run: xvfb-run -a node tools/smoke-package.mjs release/badminton-book-1.4.1-linux.zip
       - name: Extract and run Windows package and cmd launcher
         if: runner.os == 'Windows'
-        run: node tools/smoke-package.mjs release/badminton-book-1.4.0-windows.zip
+        run: node tools/smoke-package.mjs release/badminton-book-1.4.1-windows.zip
       - name: Verify all three archives on macOS
         if: runner.os == 'macOS'
         run: |
-          node tools/smoke-package.mjs release/badminton-book-1.4.0-macos.zip
-          node tools/smoke-package.mjs release/badminton-book-1.4.0-windows.zip
-          node tools/smoke-package.mjs release/badminton-book-1.4.0-linux.zip
+          node tools/smoke-package.mjs release/badminton-book-1.4.1-macos.zip
+          node tools/smoke-package.mjs release/badminton-book-1.4.1-windows.zip
+          node tools/smoke-package.mjs release/badminton-book-1.4.1-linux.zip
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: success()
         with:

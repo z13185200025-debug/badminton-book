@@ -1,6 +1,6 @@
 # Linux 使用说明
 
-下载 [Linux ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.0/badminton-book-1.4.0-linux.zip)。推荐有图形桌面的 Ubuntu 24.04 / 22.04 或 Debian 12 / 13。原生测试范围见 [测试记录](testing.md)，其他发行版和 ARM 设备需自行确认浏览器依赖。
+下载 [Linux ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/badminton-book-1.4.1-linux.zip)。推荐有图形桌面的 Ubuntu 24.04 / 22.04 或 Debian 12 / 13。原生测试范围见 [测试记录](testing.md)，其他发行版和 ARM 设备需自行确认浏览器依赖。
 
 1. 安装 [Node.js LTS](https://nodejs.org/en/download)，要求版本至少 22；运行 `node --version` 检查。
 2. 安装官方 Chrome 或发行版提供的 Chromium，并确认能从桌面正常打开。
