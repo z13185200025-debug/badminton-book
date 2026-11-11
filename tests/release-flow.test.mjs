@@ -24,7 +24,7 @@ function puzzle() {
   return {background:uri(bg),piece:uri(piece)};
 }
 
-test('preheated release waits two seconds before querying the newly opened date and reaches Pay without paying',async t=>{
+for(const captchaRecovery of [false,true])test(`preheated release reaches Pay without paying (${captchaRecovery?'conservative CAPTCHA recovery':'first attempt'})`,async t=>{
   const browser=await chromium.launch({...browserOptions(),headless:true});
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   await reduceVisualDelay(context);
@@ -92,7 +92,7 @@ test('preheated release waits two seconds before querying the newly opened date 
     assert.equal(dateRequests.length,queriesBeforeDelay,'the delay must not send venue queries or create orders');
     await refreshAvailability(page,target,{log});
     await prepareSelection(page,target,{log});log('selection_verified');
-    const created=await createOrder(page,target,{log});
+    const created=await createOrder(page,target,{log,captchaRecovery});
     assert.equal(created.number,'D900');
     await waitForPaymentReady(created.popup,target,log);
     assert.equal(await created.popup.evaluate(()=>window.payClicks||0),0);
@@ -100,10 +100,13 @@ test('preheated release waits two seconds before querying the newly opened date 
     assert.equal(await created.popup.evaluate(()=>window.payClicks||0),0);
     assert.equal(venueLoads,1);assert.equal(protocolLoads,1);assert.equal(submits,1);assert.equal(captchaChecks,1);
     assert.equal(events.filter(event=>event.event==='booking_started').length,1);
+    const wait=events.find(event=>event.event==='captcha_recovery_wait');
+    assert.equal(!!wait,captchaRecovery);
+    if(wait){assert.equal(wait.waitMs,600);assert.ok(events.find(e=>e.event==='captcha_matched').elapsedMs-wait.elapsedMs>=590);}
     assert.ok(dateRequests.every(request=>request.date!==target.date||request.afterRelease));
     const record={scope:'Isolated browser fixture; synthetic CAPTCHA and explicitly mocked network, not live booking speed',payClicked:false,releaseToPayVisibleMs:events.find(event=>event.event==='pay_visible').elapsedMs,releaseToPayReadyMs:events.find(event=>event.event==='pay_ready').elapsedMs,events};
     await fs.mkdir('artifacts/optimization-20261105',{recursive:true});
-    await fs.writeFile('artifacts/optimization-20261105/fixture-release-result.json',JSON.stringify(record,null,2)+'\n');
+    await fs.writeFile(`artifacts/optimization-20261105/fixture-release-${captchaRecovery?'recovery':'result'}.json`,JSON.stringify(record,null,2)+'\n');
     t.diagnostic(JSON.stringify({fixtureReleaseToPayVisibleMs:record.releaseToPayVisibleMs,fixtureReleaseToPayReadyMs:record.releaseToPayReadyMs,payClicked:false}));
   } finally {await browser.close();}
 });

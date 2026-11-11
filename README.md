@@ -6,13 +6,13 @@
 
 | 系统 | 下载 | 启动方式 | 使用说明 |
 | --- | --- | --- | --- |
-| macOS | [Mac 1.4.1](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/badminton-book-1.4.1-macos.zip) | 解压后双击 `羽毛球预约助手.app` | [Mac 说明](docs/macos.md) |
-| Windows | [Windows 1.4.1](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/badminton-book-1.4.1-windows.zip) | 解压后双击 `start-windows.cmd` | [Windows 说明](docs/windows.md) |
-| Linux | [Linux 1.4.1](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.1/badminton-book-1.4.1-linux.zip) | 图形桌面中运行 `sh start-linux.sh` | [Linux 说明](docs/linux.md) |
+| macOS | [Mac 1.4.2](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.2/badminton-book-1.4.2-macos.zip) | 解压后双击 `羽毛球预约助手.app` | [Mac 说明](docs/macos.md) |
+| Windows | [Windows 1.4.2](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.2/badminton-book-1.4.2-windows.zip) | 解压后双击 `start-windows.cmd` | [Windows 说明](docs/windows.md) |
+| Linux | [Linux 1.4.2](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.2/badminton-book-1.4.2-linux.zip) | 图形桌面中运行 `sh start-linux.sh` | [Linux 说明](docs/linux.md) |
 
-[全部发布文件及 SHA-256](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.1) · [测试记录](docs/testing.md) · [常见问题](docs/troubleshooting.md)
+[全部发布文件及 SHA-256](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.2) · [测试记录](docs/testing.md) · [常见问题](docs/troubleshooting.md)
 
-**1.4.1 修复目录计数误筛场号、叠加弹窗、须知误判及旧入口失效后的恢复，并减少识别状态中的个人资料。** Mac 原生启动器保持原有字节与签名，只更新旁边的脚本和界面。安装包已带 npm 依赖，仍需先安装 **Node.js 22+（推荐官网 LTS）** 和浏览器。Windows 支持 Chrome 或 Edge；Linux 支持 Chrome / Chromium。无需安装 Codex、ChatGPT 或配置 OpenAI API。
+**1.4.2 增加二次验证码内容核对、按请求绑定的诊断和仅失败后启用的保守重试。学校拒绝原因仍需真实订单验证，不能保证增加等待就能解决。** Mac 原生启动器保持原有字节与签名，只更新旁边的脚本和界面。安装包已带 npm 依赖，仍需先安装 **Node.js 22+（推荐官网 LTS）** 和浏览器。Windows 支持 Chrome 或 Edge；Linux 支持 Chrome / Chromium。无需安装 Codex、ChatGPT 或配置 OpenAI API。
 
 ## 日常使用
 

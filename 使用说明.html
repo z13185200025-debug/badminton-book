@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>羽毛球预约助手使用说明</title><style>body{font:16px/1.8 system-ui;color:#20382e;background:#f6f8f2;max-width:850px;margin:40px auto;padding:24px}h1{color:#235c44}pre{white-space:pre-wrap;font:inherit}</style><h1>羽毛球预约助手</h1><pre>羽毛球预约助手 1.4.1
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>羽毛球预约助手使用说明</title><style>body{font:16px/1.8 system-ui;color:#20382e;background:#f6f8f2;max-width:850px;margin:40px auto;padding:24px}h1{color:#235c44}pre{white-space:pre-wrap;font:inherit}</style><h1>羽毛球预约助手</h1><pre>羽毛球预约助手 1.4.2
 
 Mac：双击“羽毛球预约助手.app”或“打开预约助手.command”。
 Windows：双击 start-windows.cmd。
@@ -15,10 +15,11 @@ Linux：在图形桌面运行 sh start-linux.sh。
 场馆自动识别：预热及放号时读取学校当前官方羽毛球目录，核对运动、校区、预约开关、详情、排期与提交 ID。训练场和篮球场自动切换；旧链接仍能打开并显示免费，也不会单独用于决定预约。场号以目标日期的实际排期核对；目录总数不作为最大场号。
 遇到“当日8点以后才能查看当天的预约”会正常关闭提示并继续等放号。未知或互相矛盾的数据会停止并记录原因。未开放日期不会自动改成别的日期。
 
-技术详情显示实际场馆与 ID、目录、排期、候选进度、验证码、接口耗时、Pay 就绪及订单状态。预热、请求和离线测试通过不等于真实预订成功，以学校最终有效订单为准。
+技术详情显示实际场馆、排期、候选、滑块检查、二次校验内容一致性、校验后提交间隔、接口耗时、Pay 及订单状态。
+首次提交不增加验证码等待；明确被拒绝且查无订单后，仅用新验证码恢复一次：拖动前多等 600 毫秒，校验通过后至少等满 1000 毫秒。仍失败会停止。预热、请求和离线测试通过不等于真实预订成功，以学校最终有效订单为准。
 保持电脑接电、联网且不休眠；可熄屏，合盖可能休眠。
 账号资料在 .state，配置在 config.json，日志在 artifacts。分享原始发布包或下载链接，勿分享个人资料目录。
 
 完整说明：README.md、docs/macos.md、docs/windows.md、docs/linux.md、docs/venue-detection.md。
-下载：https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.1
+下载：https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.2
 </pre></html>

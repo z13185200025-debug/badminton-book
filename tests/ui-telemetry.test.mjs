@@ -26,3 +26,14 @@ test('interface diagnostics retain safe latency and result fields, count failure
   for(let i=0;i<200;i++)emit('request_finished',{endpoint:'/venue-server/api/orders/mine',durationMs:50,httpStatus:200});
   assert.equal(run.events.length,80);
 });
+
+test('slider success is displayed separately from second-stage server rejection and recovery delay',()=>{
+  const run={events:[]},emit=(event,details={})=>recordRunEvent(run,{event,at:'2026-11-11T00:00:00.000Z',elapsedMs:1,...details});
+  emit('captcha_result',{repCode:'0000'});
+  emit('order_submit_dispatched',{proofStatus:'matched',afterCheckMs:1002,clientHoldMs:498,token:'PRIVATE'});
+  emit('captcha_order_rejected',{code:250});emit('captcha_submission_recovery',{attempt:1});
+  assert.equal(run.captcha.passed,true);assert.equal(run.captcha.orderRejected,true);assert.equal(run.captcha.afterCheckMs,1002);assert.equal(run.captcha.recoveryAttempt,1);
+  assert.doesNotMatch(JSON.stringify(run),/PRIVATE/);
+  emit('captcha_detected');assert.equal(run.captcha.passed,false);assert.equal(run.captcha.code,undefined);
+  assert.equal(run.captcha.proofStatus,undefined);assert.equal(run.captcha.orderRejected,undefined);
+});

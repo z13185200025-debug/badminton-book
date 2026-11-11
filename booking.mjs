@@ -185,6 +185,7 @@ try {
             try {
               const result=await createOrder(page,target,{
                 log,
+                captchaRecovery:captchaSubmissionRetries>0,
                 onChallenge:flag('--captcha-gate')?async p=>{
                   const src=await p.locator('.verifybox .verify-img-panel > img').getAttribute('src');
                   const id=createHash('sha256').update(src).digest('hex').slice(0,16);
