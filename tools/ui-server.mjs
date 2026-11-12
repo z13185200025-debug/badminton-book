@@ -15,7 +15,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const idleRun=()=>({stage:'idle',message:'尚未开始本次预约',events:[],running:false});
 const successStages=new Set(['confirmed','already_booked']);
 
-export async function createInterfaceServer({projectRoot=root,worker,token=randomBytes(32).toString('hex'),idleTimeoutMs=0}={}) {
+export async function createInterfaceServer({projectRoot=root,worker,token=randomBytes(32).toString('hex'),idleTimeoutMs=0,clock=()=>new Date()}={}) {
   const state=path.join(projectRoot,'.state'),configFile=path.join(projectRoot,'config.json');
   await fs.mkdir(state,{recursive:true,mode:0o700});await fs.chmod(state,0o700);
   try{await fs.access(configFile);}catch{await fs.copyFile(path.join(projectRoot,'config.example.json'),configFile);}
@@ -48,7 +48,7 @@ export async function createInterfaceServer({projectRoot=root,worker,token=rando
     }));
   }
   function ensureIdle(){if(busy||children.size)throw new Error('已有任务正在运行，请先停止本次任务');if(closing)throw new Error('应用正在关闭');}
-  function preparePlans(current,input,kind,now=new Date()) {
+  function preparePlans(current,input,kind,now=clock()) {
     const inputs=kind==='login'?[{accountId:input.accountId||'default'}]:input.accounts||[{...input,accountId:input.accountId||'default'}];
     if(!Array.isArray(inputs)||!inputs.length||inputs.length>MAX_ACCOUNTS)throw new Error(`请选择 1–${MAX_ACCOUNTS} 个账号`);
     if(new Set(inputs.map(a=>a.accountId)).size!==inputs.length)throw new Error('同一账号不能在本次计划中重复出现');
@@ -56,7 +56,7 @@ export async function createInterfaceServer({projectRoot=root,worker,token=rando
       const account=accounts.get(item.accountId),effective=accountConfig(current,account);
       if(!account.accountName?.trim())throw new Error(`${account.label}：请先填写网页显示的账号姓名`);
       if(!account.permissionConfirmed)throw new Error(`${account.label}：请先确认学校自动化使用权限`);
-      const plan=kind==='login'?{command:'login',config:effective}:makeInterfacePlan(effective,{...item,date:input.date,mode:input.mode},now);
+      const plan=kind==='login'?{command:'login',config:effective}:makeInterfacePlan(effective,{...item,date:input.date,dateMode:input.dateMode,mode:input.mode},now);
       return {account,plan};
     });
   }
@@ -113,7 +113,7 @@ export async function createInterfaceServer({projectRoot=root,worker,token=rando
         lastAccess=Date.now();
         if(req.method==='GET'&&requested.pathname==='/api/state'){
           const current=await config();
-          const list=await Promise.all(accounts.list().map(async a=>({...a,defaults:interfaceDefaults(accountConfig(current,a)),profilePresent:await fs.access(accountPaths(projectRoot,a.id).profile).then(()=>true).catch(()=>false),run:getRun(a.id)})));
+          const list=await Promise.all(accounts.list().map(async a=>({...a,defaults:interfaceDefaults(accountConfig(current,a),clock()),profilePresent:await fs.access(accountPaths(projectRoot,a.id).profile).then(()=>true).catch(()=>false),run:getRun(a.id)})));
           const first=list[0];
           return json(res,200,{defaults:first.defaults,accountName:first.accountName,permissionConfirmed:first.permissionConfirmed,profilePresent:first.profilePresent,run:getRun(),accounts:list,batch:batchState(),busy:busy||children.size>0,recurring:false,maxAccounts:MAX_ACCOUNTS});
         }

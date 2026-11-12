@@ -59,7 +59,7 @@ test('real booking child launched by the UI enters one-time waiting and stops be
   }finally{await server?.close();await fs.rm(directory,{recursive:true,force:true});}
 });
 
-async function fixture() {
+async function fixture(clock) {
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'badminton-ui-'));
   await fs.writeFile(path.join(directory,'config.json'),JSON.stringify(config));
   await fs.cp(path.join(root,'ui'),path.join(directory,'ui'),{recursive:true});
@@ -69,7 +69,7 @@ async function fixture() {
     child.kill=signal=>{calls.at(-1).signal=signal;setImmediate(()=>child.emit('exit',0));return true;};
     calls.push({args,child});return child;
   };
-  const server=await createInterfaceServer({projectRoot:directory,worker});
+  const server=await createInterfaceServer({projectRoot:directory,worker,clock});
   const request=(route,data,extra={})=>fetch(server.url+'/api/'+route,{method:data===undefined?'GET':'POST',headers:{Authorization:'Bearer '+server.token,...(data===undefined?{}:{'Content-Type':'application/json'}),...extra},body:data===undefined?undefined:JSON.stringify(data)});
   return {directory,calls,server,request,close:async()=>{await server.close();await fs.rm(directory,{recursive:true,force:true});}};
 }
@@ -112,6 +112,7 @@ test('interface edits candidates and starts only after the button; stops after u
     assert.equal(await page.getByRole('button',{name:'移除 9 号场',exact:true}).count(),1);
     assert.doesNotMatch(await page.locator('body').innerText(),/留一小时|去打球|安排你的下一场/);
     const chosenDate=await page.locator('#date').inputValue();
+    await page.locator('#auto-date').uncheck();
     await page.getByRole('radio',{name:/本次等到/}).check();
     assert.equal(await page.locator('#date').inputValue(),chosenDate,'changing execution mode must preserve the requested date');
     assert.match(await page.locator('#schedule-note').innerText(),/仅本次等待/);
@@ -142,4 +143,58 @@ test('interface edits candidates and starts only after the button; stops after u
     assert.equal(f.calls[0].signal,'SIGTERM');
     assert.equal(errors.length,0,errors.join('\n'));
   }finally{await browser.close();await f.close();}
+});
+
+test('automatic dates follow midnight and the release day while an armed date stays fixed',async()=>{
+  let instant=new Date('2026-11-11T23:59:50+08:00');
+  const f=await fixture(()=>instant),browser=await chromium.launch({...browserOptions(),headless:true});
+  try{
+    const page=await browser.newPage();await page.goto(f.server.openUrl);
+    await page.waitForFunction(()=>document.querySelector('#date').value==='2026-11-13');
+    instant=new Date('2026-11-12T00:00:26+08:00');
+    await page.waitForFunction(()=>document.querySelector('#date').value==='2026-11-14');
+    await page.getByRole('radio',{name:/本次等到/}).check();
+    assert.equal(await page.locator('#date').inputValue(),'2026-11-14');
+    await page.getByRole('button',{name:/开始本次等待/}).click();
+    await page.getByRole('button',{name:'停止本次执行'}).waitFor();
+    const args=f.calls[0].args;assert.equal(args[args.indexOf('--date')+1],'2026-11-14');assert.equal(args[args.indexOf('--at')+1],'2026-11-12T00:00:00.000Z');
+    instant=new Date('2026-11-13T00:00:26+08:00');
+    await page.waitForFunction(()=>document.querySelector('#date').min==='2026-11-13');
+    assert.match(await page.locator('#schedule-note').innerText(),/11\/12 08:00:00/);
+    assert.equal(await page.locator('#date').inputValue(),'2026-11-14','running plan must not roll over');
+    assert.equal(f.calls.length,1);
+  }finally{await browser.close();await f.close();}
+});
+
+test('waiting mode advances an automatic date but explicit manual dates remain unchanged',async()=>{
+  let instant=new Date('2026-11-11T20:50:00+08:00');
+  const f=await fixture(()=>instant),browser=await chromium.launch({...browserOptions(),headless:true});
+  try{
+    const page=await browser.newPage();await page.goto(f.server.openUrl);
+    await page.waitForFunction(()=>document.querySelector('#date').value==='2026-11-13');
+    await page.getByRole('radio',{name:/本次等到/}).check();
+    assert.equal(await page.locator('#date').inputValue(),'2026-11-14');
+    await page.locator('#date').fill('2026-11-13');await page.locator('#slot').focus();
+    assert.equal(await page.locator('#auto-date').isChecked(),false);
+    instant=new Date('2026-11-12T00:00:26+08:00');
+    await page.waitForFunction(()=>document.querySelector('#date-hint').textContent.includes('手动日期'));
+    await page.getByRole('radio',{name:/现在开始/}).check();
+    assert.equal(await page.locator('#date').inputValue(),'2026-11-13');
+    await page.locator('#auto-date').check();await page.waitForFunction(()=>document.querySelector('#date').value==='2026-11-14');
+    assert.equal(f.calls.length,0);
+  }finally{await browser.close();await f.close();}
+});
+
+test('the server resolves an automatic stale date for every account and preserves an explicit date',async()=>{
+  const instant=new Date('2026-11-12T00:00:26+08:00');
+  const defaults=interfaceDefaults(config,instant);
+  assert.equal(makeInterfacePlan(config,{...defaults,mode:'release',date:'2026-11-13',dateMode:'auto'},instant).date,'2026-11-14');
+  assert.equal(makeInterfacePlan(config,{...defaults,mode:'release',date:'2026-11-13',dateMode:'manual'},instant).date,'2026-11-13');
+  const f=await fixture(()=>instant);
+  try{
+    const created=await(await f.request('accounts',{label:'第二账号',accountName:'测试二',permissionConfirmed:true})).json();
+    const response=await f.request('start',{date:'2026-11-13',dateMode:'auto',mode:'release',accounts:[{...defaults,accountId:'default'},{...defaults,accountId:created.accountId}]});
+    assert.equal(response.status,200,await response.text());assert.equal(f.calls.length,2);
+    for(const {args} of f.calls)assert.equal(args[args.indexOf('--date')+1],'2026-11-14');
+  }finally{await f.close();}
 });

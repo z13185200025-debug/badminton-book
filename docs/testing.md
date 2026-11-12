@@ -10,9 +10,9 @@
 npm ci
 npm test
 npm run package
-node tools/smoke-package.mjs release/badminton-book-1.4.2-macos.zip
-node tools/smoke-package.mjs release/badminton-book-1.4.2-windows.zip
-node tools/smoke-package.mjs release/badminton-book-1.4.2-linux.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.3-macos.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.3-windows.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.3-linux.zip
 ```
 
 测试默认使用本机 Chrome / Chromium，Windows 无 Chrome 时使用 Edge。CI 使用与 Playwright 匹配的 Chromium：
@@ -32,14 +32,14 @@ node node_modules/playwright-core/cli.js install chromium
 - Windows / Linux 浏览器检测、中文及空格目录、IPC 停止、关闭窗口清理。
 - ZIP 清单与每个文件 SHA-256、私有数据排除、解压后初始空账号和手动启动状态。
 
-## 1.4.2 验证范围
+## 1.4.3 验证范围
 
-本次新增：验证码内容比较、乱序响应绑定、延迟解析、刷新前校验证据保留、首次无额外等待、恢复等待、提交内容不变、错误内容在发送前拦截、滑块成功与订单拒绝分别显示。浏览器测试全部使用隔离模拟服务；不创建真实学校订单。
+本次新增：界面跨午夜日期更新、等待模式按放号日计算、手动日期保持、运行中日期固定、多个账号使用服务器解析后的日期、逐步降低查询频率、目录缓存与强制复查、限流弹窗不确认不重试、后台限流不切备用入口、直接选中已显示的目标日期。
 
-本地及三系统最终结果、对应提交与发布包哈希见 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.2/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.2/SHA256SUMS.txt)。包内说明生成于 CI 前，不将待运行项目表述为通过。
+本地及三系统最终结果、对应提交与发布包哈希见 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.3/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.3/SHA256SUMS.txt)。包内说明生成于 CI 前，不将待运行项目表述为通过。
 
-新增等待属于有限恢复策略；学校二次校验拒绝的根因尚未确认，离线通过不能证明服务器接受真实订单，也不保证固定抢订耗时。详见 [验证码诊断](captcha-diagnostics.md)。
+所有学校接口测试使用隔离模拟服务。本次没有创建、支付或取消真实订单。降低查询频率不能保证不会触发学校的其他限制；服务器阈值未知。验证码二次校验问题的边界见 [诊断说明](captcha-diagnostics.md)。
 
 Mac 原生启动器不重编译、不重签名。Windows 11、其他 Linux 发行版及 ARM Windows/Linux 需分别验证。
 
-旧版结果：[1.4.1 的 74 项跨平台记录](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.1)，不作为本次代码的测试结果。
+旧版结果：[1.4.2 的 83 项跨平台记录](https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.2)，不作为本次代码的测试结果。

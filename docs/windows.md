@@ -1,6 +1,6 @@
 # Windows 使用说明
 
-下载 [Windows ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.2/badminton-book-1.4.2-windows.zip)。建议 Windows 11；本项目的自动化测试使用 GitHub Windows 运行器，具体结果见 [测试记录](testing.md)。
+下载 [Windows ZIP](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.3/badminton-book-1.4.3-windows.zip)。建议 Windows 11；本项目的自动化测试使用 GitHub Windows 运行器，具体结果见 [测试记录](testing.md)。
 
 1. 从 [Node.js 官网](https://nodejs.org/en/download) 安装 LTS（版本至少 22），保留安装器的 PATH 设置。安装后重新打开终端。
 2. 安装或更新 [Google Chrome](https://www.google.com/chrome/)；也可使用系统已安装的 Microsoft Edge。默认先找 Chrome，再找 Edge。

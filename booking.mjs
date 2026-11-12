@@ -15,6 +15,7 @@ import {browserOptions} from './lib/platform.mjs';
 import {installWorkerStop} from './lib/process-control.mjs';
 import {keepAwake} from './lib/keep-awake.mjs';
 import {createVenueRouter,existingVenueCandidates} from './lib/venue-router.mjs';
+import {pollingDelayMs} from './lib/polling.mjs';
 
 const root=import.meta.dirname;
 process.umask(0o077);
@@ -90,7 +91,7 @@ try {
   }
   if(scheduled)awake=keepAwake(log);
   if(['watch','at'].includes(command)) {
-    await setStatus('armed',{release:releaseAt.toISOString(),preheat:new Date(preheatAt).toISOString(),plannedStartAt:new Date(releaseAt.getTime()+bookingDelayMs(config)).toISOString(),autoPay:config.autoPay===true,candidates:config.candidates});
+    await setStatus('armed',{date,release:releaseAt.toISOString(),preheat:new Date(preheatAt).toISOString(),plannedStartAt:new Date(releaseAt.getTime()+bookingDelayMs(config)).toISOString(),autoPay:config.autoPay===true,candidates:config.candidates});
     const waitStarted=performance.now();
     while(Date.now()<preheatAt){if(stopping)throw new Error('后台任务已停止');await delay(Math.min(1000,preheatAt-Date.now()));}
     log('preheat_wait_complete',{waitMs:Math.round(performance.now()-waitStarted)});
@@ -152,9 +153,10 @@ try {
         if(releaseDeadline&&Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
         await router.refresh({force:true});candidates=router.targets;
         orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
-        let acquired=false,needsRefresh=scheduled,captchaSubmissionRetries=0,venueRefreshes=0;
+        let acquired=false,needsRefresh=scheduled,captchaSubmissionRetries=0,venueRefreshes=0,emptyRounds=0;
         while(!acquired) {
           if(stopping)throw new Error('本次任务已停止');
+          if(releaseDeadline&&Date.now()>=releaseDeadline)throw new Error('已超过本次放号窗口，停止查询');
           await router.refresh();candidates=router.targets;
           orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
           const refreshRound=needsRefresh,refreshed=new Set(),unavailableVenues=new Set();
@@ -203,6 +205,7 @@ try {
               await setStatus('submitted_pending_verification');
               break;
             } catch(error) {
+              if(error.code==='RATE_LIMITED')throw error;
               // Reconcile every failed submission before considering another court.
               // Explicit CAPTCHA rejection can receive one fresh challenge after
               // confirming there is no order. Never reuse the rejected proof.
@@ -228,8 +231,9 @@ try {
           if(!acquired) {
             if(venueChanged&&venueRefreshes++<3&&await router.refresh({force:true})){needsRefresh=true;continue;}
             if(!scheduled||Date.now()>=releaseDeadline)throw new Error(dateNotOpen?'目标日期尚未开放或暂无场次，停止本次运行':'所有候选场地均不可用，停止本次运行');
-            log(dateNotOpen?'waiting_for_date_release':'waiting_for_candidate');
-            await delay(Number.isFinite(config.releasePollIntervalMs)?Math.min(2000,Math.max(250,config.releasePollIntervalMs)):500);
+            const waitMs=Math.max(0,Math.min(pollingDelayMs(config,emptyRounds++),releaseDeadline-Date.now()));
+            log(dateNotOpen?'waiting_for_date_release':'waiting_for_candidate',{waitMs,emptyRounds});
+            await delay(waitMs);
             needsRefresh=true;
           }
         }
@@ -273,6 +277,7 @@ try {
     }
   }
 } catch(error) {
+  if(error.code==='RATE_LIMITED')log('rate_limited');
   await setStatus(stopping?'cancelled':'stopped',stopping?{note:'当前后台等待已按停止指令结束，定时配置保留。'}:{error:error.message});
   if(page&&!page.isClosed()) await page.screenshot({path:path.join(runDir,'stopped.png'),fullPage:true}).catch(()=>{});
   process.exitCode=stopping?0:1;

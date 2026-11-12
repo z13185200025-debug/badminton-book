@@ -17,13 +17,16 @@ function showError(error){$('#connection-error').textContent=error.message;$('#c
 function clearError(){$('#connection-error').hidden=true;}
 function updateSummary(){
   const mode=$('input[name=mode]:checked').value,wait=mode==='release';
+  if($('#auto-date').checked&&!current.busy&&!submitting)$('#date').value=wait?current.defaults.nextReleaseTarget:current.defaults.date;
+  if(current.busy&&selectedRun().kind==='booking'&&selectedRun().date)$('#date').value=selectedRun().date;
   $('#date').min=wait?current.defaults.nextReleaseDay:current.defaults.today;
   $('#date').max=wait?current.defaults.nextReleaseTarget:current.defaults.date;
-  $('#date-hint').textContent=dateText($('#date').value);
+  $('#date-hint').textContent=dateText($('#date').value)+($('#auto-date').checked?(wait?' · 放号日后两天':' · 今天后两天'):' · 手动日期');
   $('#summary-date').textContent=dateText($('#date').value);
   $('#summary-slot').textContent=$('#slot').value.replace('-',' — ');
   const delayMs=configuredDelay();
-  $('#schedule-note').textContent=wait?`仅本次等待：${clockText(current.defaults.nextRelease)} 放号，${clockText(new Date(Date.parse(current.defaults.nextRelease)+delayMs))} 开始选场。`:`页面就绪后等待 ${seconds(delayMs)}，再开始选场。`;
+  const release=current.busy&&selectedRun().kind==='booking'?selectedRun().releaseAt:current.defaults.nextRelease;
+  $('#schedule-note').textContent=wait?`仅本次等待：${clockText(release)} 放号，${clockText(new Date(Date.parse(release)+delayMs))} 开始选场。`:`页面就绪后等待 ${seconds(delayMs)}，再开始选场。`;
   $('#start').firstChild.textContent=(wait?'开始本次等待':'开始本次预约')+` · ${enabled.size} 个账号 `;
   renderTechnical(selectedRun());renderMetrics(selectedRun());
 }
@@ -75,7 +78,8 @@ function renderTechnical(run){
     ['验证码恢复重试',`${run.captcha?.recoveryAttempt||0} / 1 次 · 重试时拖动前 +600 ms、校验后至少 1000 ms`],
     ['订单提交响应',run.orderResponse?`HTTP ${run.orderResponse.httpStatus} · 业务码 ${run.orderResponse.code}`:'—'],
     ['Pay 加载耗时',seconds(duration('pay_visible','pay_ready'))],
-    ['放号重试间隔 / 窗口',`${current.defaults.releasePollIntervalMs} ms / ${current.defaults.releaseWindowSeconds} s`],
+    ['无空场后查询间隔 / 窗口',`${current.defaults.releasePollIntervalMs} → ${current.defaults.releasePollMaxIntervalMs} ms / ${current.defaults.releaseWindowSeconds} s`],
+    ['目录定期复查',`${current.defaults.catalogRefreshIntervalMs} ms · 放号与场馆变化时立即核对`],
   ];
   $('#technical').replaceChildren();
   for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;$('#technical').append(dt,dd);}
@@ -156,10 +160,10 @@ async function refresh(){
     if(!selectedAccount())selectedId=current.accounts[0].id;
     $('#venue-name').textContent=current.defaults.venueName;
     if(!initialized){$('#date').value=current.defaults.date;initialized=true;loadDraft();}
-    renderAccounts();renderRun(selectedRun());
+    updateSummary();renderAccounts();renderRun(selectedRun());
   }catch(error){if(!disconnected){showError(new Error('本地连接已断开。请重新打开“羽毛球预约助手”。'));disconnected=true;document.body.classList.add('disconnected');$('#controls').disabled=true;}}
 }
-function planPayload(){stashDraft();return {date:$('#date').value,mode:$('input[name=mode]:checked').value,accounts:current.accounts.filter(a=>enabled.has(a.id)).map(a=>({accountId:a.id,...drafts.get(a.id)}))};}
+function planPayload(){stashDraft();return {date:$('#date').value,dateMode:$('#auto-date').checked?'auto':'manual',mode:$('input[name=mode]:checked').value,accounts:current.accounts.filter(a=>enabled.has(a.id)).map(a=>({accountId:a.id,...drafts.get(a.id)}))};}
 $('#booking-form').addEventListener('submit',async event=>{
   event.preventDefault();if(submitting||current?.busy)return;clearError();
   const payload=planPayload();if(!payload.accounts.length){showError(new Error('请先勾选本次参与的账号'));return;}
@@ -169,7 +173,9 @@ $('#booking-form').addEventListener('submit',async event=>{
 });
 $('#save-plans').addEventListener('click',async()=>{try{await api('plans',planPayload());$('#batch-summary').textContent='已保存所选账号的时段、候选场地和 Pay 设置。';}catch(e){showError(e);}});
 $('#stop').addEventListener('click',async()=>{try{$('#stop').disabled=true;await api('stop',{});await refresh();}catch(error){showError(error);}finally{$('#stop').disabled=false;}});
-$('#date').addEventListener('change',updateSummary);
+$('#date').addEventListener('change',()=>{$('#auto-date').checked=false;updateSummary();});
+$('#date').addEventListener('input',()=>{$('#auto-date').checked=false;});
+$('#auto-date').addEventListener('change',updateSummary);
 $('#slot').addEventListener('change',()=>{fallbacks=fallbacks.filter(slot=>slot!==$('#slot').value);renderFallbacks();updateSummary();stashDraft();renderAccounts();});
 $('#booking-delay').addEventListener('input',()=>{if($('#booking-delay').validity.valid){updateSummary();stashDraft();}});
 for(const id of ['#auto-pay','#visible'])$(id).addEventListener('change',()=>{stashDraft();renderAccounts();});

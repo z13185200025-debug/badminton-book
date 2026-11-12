@@ -184,6 +184,25 @@ test('UI diagnostics expose verified venue and schedule identities without copyi
  recordRunEvent(run,{event:'schedule_verified',venueId:1,spaceId:1,timeId:500,availableDates:[date],requestedDate:date,rowCount:9,courts:['No.1','No.9'],token:'private'});
  assert.equal(run.venueId,1);assert.equal(run.schedule.timeId,500);assert.equal(run.schedule.rowCount,9);assert.ok(!JSON.stringify(run).includes('private'));
 });
+
+test('normal catalog polling waits fifteen seconds while an explicit release or identity recheck is immediate',async()=>{
+ await fixture(async(page,state)=>{
+  let now=0;const router=await createVenueRouter(page,[target()],{now:()=>now});
+  const count=()=>state.requests.filter(p=>p.includes('/campus/venue/info')).length;
+  const initial=count();now=3000;await router.refresh();assert.equal(count(),initial);
+  now=14999;await router.refresh();assert.equal(count(),initial);
+  now=15000;await router.refresh();assert.equal(count(),initial+1);
+  now=15001;await router.refresh({force:true});assert.equal(count(),initial+2);
+ });
+});
+
+test('a server rate limit aborts venue bootstrap without trying a different entry',async()=>{
+ await fixture(async(page,state)=>{
+  state.day=()=>({code:250,message:'访问频繁，限制访问中...'});
+  await assert.rejects(()=>createVenueRouter(page,[target()],{warmAlternates:true}),e=>e.code==='RATE_LIMITED');
+  assert.equal(state.requests.some(p=>p.startsWith('/venue/venue-reservation/346')),false);
+ });
+});
 test('schedule discovery excludes private occupation remarks while retaining migration and blocked states',()=>{
  const body=day(),cell=body.data.reservationDateSpaceInfo[date][0][500];
  cell.adminTake=true;cell.adminRemark='PRIVATE_PERSON_13000000000';body.data.isTakeUp=1;body.data.takeUpExplain='PRIVATE_PERSON_13000000000';
