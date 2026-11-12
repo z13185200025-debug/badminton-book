@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>羽毛球预约助手使用说明</title><style>body{font:16px/1.8 system-ui;color:#20382e;background:#f6f8f2;max-width:850px;margin:40px auto;padding:24px}h1{color:#235c44}pre{white-space:pre-wrap;font:inherit}</style><h1>羽毛球预约助手</h1><pre>羽毛球预约助手 1.4.3
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>羽毛球预约助手使用说明</title><style>body{font:16px/1.8 system-ui;color:#20382e;background:#f6f8f2;max-width:850px;margin:40px auto;padding:24px}h1{color:#235c44}pre{white-space:pre-wrap;font:inherit}</style><h1>羽毛球预约助手</h1><pre>羽毛球预约助手 1.4.4
 
 Mac：双击“羽毛球预约助手.app”或“打开预约助手.command”。
 Windows：双击 start-windows.cmd。
@@ -17,11 +17,11 @@ Linux：在图形桌面运行 sh start-linux.sh。
 
 默认勾选“自动更新默认日期”：现在开始按今天后两天，本次等待按放号日后两天；手动修改日期会关闭自动更新。运行开始后日期固定，不会午夜改订其他日期。
 技术详情显示实际场馆、排期、候选、滑块检查、二次校验内容一致性、校验后提交间隔、接口耗时、Pay 及订单状态。
-没有空场时依次等待 1、2、4、8 秒复查，之后保持 8 秒；目录每 15 秒复查，放号和场馆变化时立即核对。遇到访问频繁限制会停止本次请求，不自动重启。
+候选只检查一轮，优先复用同一排期；全部无空场、目标日期未开放、查询、验证或提交失败时立即结束，不循环刷新、不重新提交。成功提交后及确认后各回查一次；结果仍不明确时停止，须手动核对学校订单。旧版重试次数或查询间隔设置不再启用重试。
 首次提交不增加验证码等待；明确被拒绝且查无订单后，仅用新验证码恢复一次：拖动前多等 600 毫秒，校验通过后至少等满 1000 毫秒。仍失败会停止。预热、请求和离线测试通过不等于真实预订成功，以学校最终有效订单为准。
 保持电脑接电、联网且不休眠；可熄屏，合盖可能休眠。
 账号资料在 .state，配置在 config.json，日志在 artifacts。分享原始发布包或下载链接，勿分享个人资料目录。
 
 完整说明：README.md、docs/macos.md、docs/windows.md、docs/linux.md、docs/venue-detection.md。
-下载：https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.3
+下载：https://github.com/z13185200025-debug/badminton-book/releases/tag/v1.4.4
 </pre></html>

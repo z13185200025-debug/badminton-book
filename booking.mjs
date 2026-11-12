@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {shanghaiDate,candidateTargets,decideExistingCandidates,nextRelease} from './lib/safety.mjs';
-import {readOrders,readOrdersWithSessionRefresh,openVenue,refreshAvailability,prepareSelection,createOrder,openPayment,verifyBooking,reconcileSubmittedOrder} from './lib/booking.mjs';
+import {readOrders,readOrdersWithSessionRefresh,createOrder,openPayment,verifyBooking,reconcileSubmittedOrder} from './lib/booking.mjs';
 import {waitForPaymentReady} from './lib/payment.mjs';
 import {observeRequests} from './lib/diagnostics.mjs';
 import {reduceVisualDelay} from './lib/browser.mjs';
@@ -15,7 +15,7 @@ import {browserOptions} from './lib/platform.mjs';
 import {installWorkerStop} from './lib/process-control.mjs';
 import {keepAwake} from './lib/keep-awake.mjs';
 import {createVenueRouter,existingVenueCandidates} from './lib/venue-router.mjs';
-import {pollingDelayMs} from './lib/polling.mjs';
+import {selectCandidateOnce} from './lib/select-once.mjs';
 
 const root=import.meta.dirname;
 process.umask(0o077);
@@ -153,89 +153,40 @@ try {
         if(releaseDeadline&&Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
         await router.refresh({force:true});candidates=router.targets;
         orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
-        let acquired=false,needsRefresh=scheduled,captchaSubmissionRetries=0,venueRefreshes=0,emptyRounds=0;
-        while(!acquired) {
-          if(stopping)throw new Error('本次任务已停止');
-          if(releaseDeadline&&Date.now()>=releaseDeadline)throw new Error('已超过本次放号窗口，停止查询');
-          await router.refresh();candidates=router.targets;
-          orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
-          const refreshRound=needsRefresh,refreshed=new Set(),unavailableVenues=new Set();
-          needsRefresh=false;
-          let dateNotOpen=!candidates.length,retryFreshCaptcha=false,venueChanged=false;
-          for(const [index,candidate] of candidates.entries()) {
-            if(unavailableVenues.has(candidate.venueId))continue;
-            target=candidate;
-            status.target={date,court:target.court,slot:target.slot,amount:0,venueId:target.venueId,venueName:target.venueName};
-            log('candidate_try',{venueId:target.venueId,venueName:target.venueName,court:target.court,slot:target.slot,index:index+1,total:candidates.length});
-            try {
-              page=await router.pageFor(target);
-              if(refreshRound&&!refreshed.has(target.venueId)){await refreshAvailability(page,target,{log});refreshed.add(target.venueId);}
-              await prepareSelection(page,target,{log});
-            }
-            catch(error) {
-              if(error.code==='UNAVAILABLE'){log('candidate_unavailable',{court:target.court});continue;}
-              if(['DATE_NOT_OPEN','DATE_EMPTY','RELEASE_NOT_OPEN','VENUE_UNAVAILABLE'].includes(error.code)){log('date_unavailable',{venueId:target.venueId,reason:error.message});dateNotOpen=true;unavailableVenues.add(target.venueId);continue;}
-              if(['VENUE_CHANGED','VENUE_MOVED','VENUE_IDENTITY_CONFLICT'].includes(error.code)){log('venue_recheck_required',{venueId:target.venueId,reason:error.message});venueChanged=true;unavailableVenues.add(target.venueId);continue;}
-              throw error;
-            }
-            await setStatus('selection_verified');
-            if(command==='check') {
-              await page.screenshot({path:path.join(runDir,'selection.png'),fullPage:true,mask:[page.locator('input[placeholder="请输入手机号"]:visible')]});
-              await setStatus('check_complete');succeeded=true;acquired=true;break;
-            }
-            if(releaseDeadline && Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
-            try {
-              const result=await createOrder(page,target,{
-                log,
-                captchaRecovery:captchaSubmissionRetries>0,
-                onChallenge:flag('--captcha-gate')?async p=>{
-                  const src=await p.locator('.verifybox .verify-img-panel > img').getAttribute('src');
-                  const id=createHash('sha256').update(src).digest('hex').slice(0,16);
-                  const screenshot=path.join(runDir,`captcha-${id}.png`);
-                  await p.locator('.verifybox:visible').screenshot({path:screenshot});
-                  await setStatus('captcha_present',{challengeId:id,screenshot});
-                  await waitApproval('captcha',id,config.captchaTimeoutSeconds);
-                }:undefined,
-              });
-              paymentPage=result.popup;submittedNumber=result.number;acquired=true;
-              if(paymentPage) {
-                paymentReadiness=waitForPaymentReady(paymentPage,target,log);
-                paymentReadiness.catch(()=>{});
-              }
-              await setStatus('submitted_pending_verification');
-              break;
-            } catch(error) {
-              if(error.code==='RATE_LIMITED')throw error;
-              // Reconcile every failed submission before considering another court.
-              // Explicit CAPTCHA rejection can receive one fresh challenge after
-              // confirming there is no order. Never reuse the rejected proof.
-              log('submission_reconcile',{court:target.court,reason:error.message});
-              const observed=decideExistingCandidates(await readOrders(ordersPage,target),orderCandidates);
-              if(observed.action!=='create') {
-                target=observed.target;order=observed.order;
-                status.target={date,court:target.court,slot:target.slot,amount:0};
-                acquired=true;break;
-              }
-              if(error.captchaRejectedResponse&&captchaSubmissionRetries<1) {
-                captchaSubmissionRetries++;
-                log('captcha_submission_recovery',{attempt:captchaSubmissionRetries,reason:error.message});
-                await openVenue(page,target,{log});
-                retryFreshCaptcha=true;break;
-              }
-              if(!error.soldOutResponse)throw error;
-              log('candidate_lost_race',{court:target.court});
-              await refreshAvailability(page,target,{log});
-            }
+        const selected=await selectCandidateOnce(router,{
+          refresh:scheduled,deadline:releaseDeadline,stopped:()=>stopping,log,
+          onCandidate:candidate=>{target=candidate;status.target={date,court:target.court,slot:target.slot,amount:0,venueId:target.venueId,venueName:target.venueName};},
+        });
+        page=selected.page;target=selected.target;
+        await setStatus('selection_verified');
+        if(command==='check') {
+          await page.screenshot({path:path.join(runDir,'selection.png'),fullPage:true,mask:[page.locator('input[placeholder="请输入手机号"]:visible')]});
+          await setStatus('check_complete');succeeded=true;
+        } else {
+          if(releaseDeadline&&Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
+          let result;
+          try {
+            result=await createOrder(page,target,{
+              log,
+              onChallenge:flag('--captcha-gate')?async p=>{
+                const src=await p.locator('.verifybox .verify-img-panel > img').getAttribute('src');
+                const id=createHash('sha256').update(src).digest('hex').slice(0,16);
+                const screenshot=path.join(runDir,`captcha-${id}.png`);
+                await p.locator('.verifybox:visible').screenshot({path:screenshot});
+                await setStatus('captcha_present',{challengeId:id,screenshot});
+                await waitApproval('captcha',id,config.captchaTimeoutSeconds);
+              }:undefined,
+            });
+          } catch(error) {
+            if(error.code!=='RATE_LIMITED')error.message+='；已停止本次运行，不重新查询或提交。如订单结果不明，请到学校订单页核对';
+            throw error;
           }
-          if(retryFreshCaptcha)continue;
-          if(!acquired) {
-            if(venueChanged&&venueRefreshes++<3&&await router.refresh({force:true})){needsRefresh=true;continue;}
-            if(!scheduled||Date.now()>=releaseDeadline)throw new Error(dateNotOpen?'目标日期尚未开放或暂无场次，停止本次运行':'所有候选场地均不可用，停止本次运行');
-            const waitMs=Math.max(0,Math.min(pollingDelayMs(config,emptyRounds++),releaseDeadline-Date.now()));
-            log(dateNotOpen?'waiting_for_date_release':'waiting_for_candidate',{waitMs,emptyRounds});
-            await delay(waitMs);
-            needsRefresh=true;
+          paymentPage=result.popup;submittedNumber=result.number;
+          if(paymentPage) {
+            paymentReadiness=waitForPaymentReady(paymentPage,target,log);
+            paymentReadiness.catch(()=>{});
           }
+          await setStatus('submitted_pending_verification');
         }
       }
       if(!succeeded) {

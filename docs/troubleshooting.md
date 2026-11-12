@@ -25,3 +25,5 @@
 核验下载：Windows PowerShell 使用 `Get-FileHash 文件名.zip -Algorithm SHA256`；Linux 使用 `sha256sum 文件名.zip`；macOS 使用 `shasum -a 256 文件名.zip`，与 Release 中的 `.sha256` 对照。
 
 场馆切换与 08:00 前查询提示的处理见 [自动识别说明](venue-detection.md)。
+
+1.4.4：全部候选无空场、日期未开放、接口/验证/提交失败后即结束本次任务，不再退避重查。保留时段和场号设置；再次预约需手动启动。提交结果不明或确认后的单次回查未完成，不代表订单不存在，请先到学校订单页核对。

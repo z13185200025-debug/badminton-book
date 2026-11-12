@@ -10,9 +10,9 @@
 npm ci
 npm test
 npm run package
-node tools/smoke-package.mjs release/badminton-book-1.4.3-macos.zip
-node tools/smoke-package.mjs release/badminton-book-1.4.3-windows.zip
-node tools/smoke-package.mjs release/badminton-book-1.4.3-linux.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.4-macos.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.4-windows.zip
+node tools/smoke-package.mjs release/badminton-book-1.4.4-linux.zip
 ```
 
 测试默认使用本机 Chrome / Chromium，Windows 无 Chrome 时使用 Edge。CI 使用与 Playwright 匹配的 Chromium：
@@ -32,11 +32,11 @@ node node_modules/playwright-core/cli.js install chromium
 - Windows / Linux 浏览器检测、中文及空格目录、IPC 停止、关闭窗口清理。
 - ZIP 清单与每个文件 SHA-256、私有数据排除、解压后初始空账号和手动启动状态。
 
-## 1.4.3 验证范围
+## 1.4.4 验证范围
 
-本次新增：界面跨午夜日期更新、等待模式按放号日计算、手动日期保持、运行中日期固定、多个账号使用服务器解析后的日期、逐步降低查询频率、目录缓存与强制复查、限流弹窗不确认不重试、后台限流不切备用入口、直接选中已显示的目标日期。
+本次新增：一轮候选耗尽即停止、候选共用排期查询、限流后不访问其他候选或入口、场馆身份变化即停止、过期窗口不发请求、订单列表单次回查与确认结果不明时停止。保留跨午夜日期、多账号隔离、支付校验与平台启动关闭测试。
 
-本地及三系统最终结果、对应提交与发布包哈希见 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.3/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.3/SHA256SUMS.txt)。包内说明生成于 CI 前，不将待运行项目表述为通过。
+本地及三系统最终结果、对应提交与发布包哈希见 [Release 测试记录](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.4/TEST-RESULTS.md) 和 [校验值](https://github.com/z13185200025-debug/badminton-book/releases/download/v1.4.4/SHA256SUMS.txt)。包内说明生成于 CI 前，不将待运行项目表述为通过。
 
 所有学校接口测试使用隔离模拟服务。本次没有创建、支付或取消真实订单。降低查询频率不能保证不会触发学校的其他限制；服务器阈值未知。验证码二次校验问题的边界见 [诊断说明](captcha-diagnostics.md)。
 

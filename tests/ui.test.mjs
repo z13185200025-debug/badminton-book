@@ -18,6 +18,7 @@ test('manual interface defaults to day after tomorrow at 19:00 and never arms it
   const defaults=interfaceDefaults(config,now);
   assert.equal(defaults.date,'2026-11-07');assert.equal(defaults.slot,'19:00-20:00');assert.equal(defaults.mode,'now');assert.equal(defaults.autoPay,false);
   assert.equal(defaults.bookingDelayMs,2000);
+  assert.equal(defaults.selectionPasses,1);assert.equal(defaults.automaticRetries,0);assert.equal(defaults.maxCaptchaAttempts,1);
   assert.equal(defaults.venueId,1);assert.equal(defaults.venueMode,'auto');assert.equal(defaults.availableCourts.length,9);assert.equal(defaults.courts.at(-1),'No.9');
   const wait=makeInterfacePlan(config,{...defaults,mode:'release',date:'2026-11-08'},now);
   assert.equal(wait.command,'at');assert.equal(wait.releaseAt,'2026-11-06T00:00:00.000Z');

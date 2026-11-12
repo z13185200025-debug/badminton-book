@@ -75,11 +75,11 @@ function renderTechnical(run){
     ['匹配耗时 / 匹配度',run.captcha?`${run.captcha.matchMs??'—'} ms / ${run.captcha.score??'—'}`:'—'],
     ['挑战等待 / 校验接口 / 校验后提交',run.captcha?`${run.captcha.challengeAgeMs??'—'} / ${run.captcha.checkDurationMs??'—'} / ${run.captcha.afterCheckMs??'—'} ms`:'—'],
     ['二次校验内容 / 订单结果',run.captcha?`${({matched:'与滑块一致',mismatched:'不一致',unreadable:'格式未识别',unavailable:'暂无证据'})[run.captcha.proofStatus]||'尚未提交'} / ${run.captcha.orderRejected?'服务器拒绝':run.orderResponse?.code==='200'?'提交已接受':'待确认'}`:'—'],
-    ['验证码恢复重试',`${run.captcha?.recoveryAttempt||0} / 1 次 · 重试时拖动前 +600 ms、校验后至少 1000 ms`],
+    ['验证 / 提交重试', '0 次 · 失败即停止，订单不明时需手动核对'],
     ['订单提交响应',run.orderResponse?`HTTP ${run.orderResponse.httpStatus} · 业务码 ${run.orderResponse.code}`:'—'],
     ['Pay 加载耗时',seconds(duration('pay_visible','pay_ready'))],
-    ['无空场后查询间隔 / 窗口',`${current.defaults.releasePollIntervalMs} → ${current.defaults.releasePollMaxIntervalMs} ms / ${current.defaults.releaseWindowSeconds} s`],
-    ['目录定期复查',`${current.defaults.catalogRefreshIntervalMs} ms · 放号与场馆变化时立即核对`],
+    ['候选检查 / 失败策略','只检查一轮 · 无空场或请求失败后停止'],
+    ['场馆目录核验','预热及放号时核验 · 失败后不刷新'],
   ];
   $('#technical').replaceChildren();
   for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;$('#technical').append(dt,dd);}

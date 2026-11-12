@@ -2,7 +2,7 @@ import {browserOptions} from '../lib/platform.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
-import {prepareSelection,readOrders,openPayment,reconcileSubmittedOrder} from '../lib/booking.mjs';
+import {prepareSelection,readOrders,openPayment,reconcileSubmittedOrder,verifyBooking} from '../lib/booking.mjs';
 import {inspectAndPay,waitForPaymentReady} from '../lib/payment.mjs';
 
 test('browser selects a fallback court in a later time window',async()=>{
@@ -89,7 +89,7 @@ test('Pay is not considered ready until asynchronous account and order details r
   }finally{await browser.close();}
 });
 
-test('an acknowledged order delayed in the list is reconciled without another submission',async()=>{
+test('an acknowledged order missing from one list check stops without polling or resubmission',async()=>{
   const browser=await chromium.launch({...browserOptions(),headless:true});let reads=0,posts=0;
   try {
     const page=await browser.newPage();
@@ -99,7 +99,23 @@ test('an acknowledged order delayed in the list is reconciled without another su
       await route.fulfill({contentType:'text/html; charset=utf-8',body:`<meta charset="utf-8">测试用户<table><tbody></tbody></table><div id="total"></div><script>fetch('/api/orders/mine').then(r=>r.json()).then(data=>{if(data.ready)document.querySelector('tbody').innerHTML='<tr><td>1</td><td>D100</td><td>Badminton</td><td>2026-11-07</td><td>No.1 12:00-13:00</td><td>Unpaid</td><td>Normal</td><td>0CNY</td><td>2026-11-05</td><td></td></tr>';else document.querySelector('#total').textContent='Total 0'})</script>`});
     });
     const target={origin:'https://hzsm.buaa.edu.cn',accountName:'测试用户',date:'2026-11-07',court:'No.1',slot:'12:00-13:00'};
-    const result=await reconcileSubmittedOrder(page,[target],'D100');
-    assert.equal(result.action,'resume');assert.equal(result.order.number,'D100');assert.equal(reads,2);assert.equal(posts,0);
+    await assert.rejects(()=>reconcileSubmittedOrder(page,[target],'D100'),/订单 D100.*已停止查询/);
+    assert.equal(reads,1);assert.equal(posts,0);
+  } finally {await browser.close();}
+});
+
+for(const action of ['reconcile','verify-paid','verify-unpaid'])test(`order status is checked once without polling: ${action}`,async()=>{
+  const browser=await chromium.launch({...browserOptions(),headless:true});let reads=0;
+  try {
+    const page=await browser.newPage();
+    await page.route('**/*',route=>{
+      if(route.request().url().includes('/api/orders/mine')){reads++;return route.fulfill({json:{code:200}});}
+      return route.fulfill({contentType:'text/html; charset=utf-8',body:`<meta charset="utf-8">测试用户<table><tbody></tbody></table><script>fetch('/api/orders/mine').then(()=>document.querySelector('tbody').innerHTML='<tr><td>1</td><td>D100</td><td>Badminton</td><td>2026-11-07</td><td>No.1 12:00-13:00</td><td>${action==='verify-paid'?'Paid':'Unpaid'}</td><td>Normal</td><td>0CNY</td><td>2026-11-05</td><td></td></tr>')</script>`});
+    });
+    const target={origin:'https://hzsm.buaa.edu.cn',accountName:'测试用户',date:'2026-11-07',court:'No.1',slot:'12:00-13:00'};
+    if(action==='reconcile')assert.equal((await reconcileSubmittedOrder(page,[target],'D100')).action,'resume');
+    else if(action==='verify-paid')assert.equal((await verifyBooking(page,target,'D100')).number,'D100');
+    else await assert.rejects(()=>verifyBooking(page,target,'D100'),/订单 D100.*已停止查询/);
+    assert.equal(reads,1);
   } finally {await browser.close();}
 });
