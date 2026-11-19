@@ -6,7 +6,7 @@ import {chromium} from 'playwright-core';
 import {createOrder} from '../lib/booking.mjs';
 import {observeRequests,requestDiagnostics} from '../lib/diagnostics.mjs';
 
-test('only an explicit CAPTCHA rejection is eligible for a fresh challenge',async()=>{
+test('explicit CAPTCHA rejections are identified without retrying',async()=>{
   const browser=await chromium.launch({...browserOptions(),headless:true});
   try {
     const page=await browser.newPage();let payload,posts=0;
@@ -25,6 +25,11 @@ test('only an explicit CAPTCHA rejection is eligible for a fresh challenge',asyn
     }
     assert.equal(posts,4,'createOrder never retries a failed POST itself');
   } finally {await browser.close();}
+});
+
+test('invalid CAPTCHA wait is rejected before touching the booking page',async()=>{
+  const page={route(){throw new Error('page must not be accessed');}};
+  for(const value of [-1,1001,0.5,'1000',NaN])await assert.rejects(()=>createOrder(page,{captchaReadyWaitMs:value}),/验证码准备等待/);
 });
 
 test('request diagnostics check challenge continuity without logging secrets',async()=>{

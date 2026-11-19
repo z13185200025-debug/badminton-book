@@ -149,9 +149,10 @@ try {
           log('release_reached',{waitMs:Math.round(performance.now()-waitStarted),clockLatenessMs:Date.now()-release});
           releaseDeadline=release+config.releaseWindowSeconds*1000;
         }
-        await waitForBookingStart({releaseAt:scheduled?releaseAt.getTime():null,delayMs:bookingDelayMs(config),log,stopped:()=>stopping});
         if(releaseDeadline&&Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
-        await router.refresh({force:true});candidates=router.targets;
+        await waitForBookingStart({releaseAt:scheduled?releaseAt.getTime():null,delayMs:bookingDelayMs(config),prepare:()=>router.refresh({force:scheduled}),log,stopped:()=>stopping});
+        if(releaseDeadline&&Date.now()>releaseDeadline)throw new Error('已超过本次放号窗口，停止新增提交');
+        candidates=router.targets;
         orderCandidates=[...candidates,...existingVenueCandidates(requestedCandidates)];
         const selected=await selectCandidateOnce(router,{
           refresh:scheduled,deadline:releaseDeadline,stopped:()=>stopping,log,

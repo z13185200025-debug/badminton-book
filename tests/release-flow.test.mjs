@@ -24,11 +24,12 @@ function puzzle() {
   return {background:uri(bg),piece:uri(piece)};
 }
 
-for(const captchaRecovery of [false,true])test(`preheated release reaches Pay without paying (${captchaRecovery?'conservative CAPTCHA recovery':'first attempt'})`,async t=>{
+for(const configuredWait of [undefined,0])test(`preheated release reaches Pay without paying (${configuredWait===undefined?'default CAPTCHA wait':'explicit zero wait'})`,async t=>{
   const browser=await chromium.launch({...browserOptions(),headless:true});
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   await reduceVisualDelay(context);
   const target={origin:'https://hzsm.buaa.edu.cn',venueId:1,accountName:'测试用户',date:'2026-11-07',court:'No.1',slot:'12:00-13:00',autoPay:false,captchaTimeoutSeconds:10,maxCaptchaAttempts:1};
+  if(configuredWait!==undefined)target.captchaReadyWaitMs=configuredWait;
   let released=false,venueLoads=0,protocolLoads=0,submits=0,captchaChecks=0;
   const dateRequests=[],images=puzzle();
   const html=`<meta charset="utf-8">Welcome! 测试用户 Badminton Gymnasium（Badminton Training Hall）
@@ -92,7 +93,7 @@ for(const captchaRecovery of [false,true])test(`preheated release reaches Pay wi
     assert.equal(dateRequests.length,queriesBeforeDelay,'the delay must not send venue queries or create orders');
     await refreshAvailability(page,target,{log});
     await prepareSelection(page,target,{log});log('selection_verified');
-    const created=await createOrder(page,target,{log,captchaRecovery});
+    const created=await createOrder(page,target,{log});
     assert.equal(created.number,'D900');
     await waitForPaymentReady(created.popup,target,log);
     assert.equal(await created.popup.evaluate(()=>window.payClicks||0),0);
@@ -100,13 +101,13 @@ for(const captchaRecovery of [false,true])test(`preheated release reaches Pay wi
     assert.equal(await created.popup.evaluate(()=>window.payClicks||0),0);
     assert.equal(venueLoads,1);assert.equal(protocolLoads,1);assert.equal(submits,1);assert.equal(captchaChecks,1);
     assert.equal(events.filter(event=>event.event==='booking_started').length,1);
-    const wait=events.find(event=>event.event==='captcha_recovery_wait');
-    assert.equal(!!wait,captchaRecovery);
-    if(wait){assert.equal(wait.waitMs,600);assert.ok(events.find(e=>e.event==='captcha_matched').elapsedMs-wait.elapsedMs>=590);}
+    const wait=events.find(event=>event.event==='captcha_ready_wait');
+    assert.equal(!!wait,configuredWait===undefined);
+    if(wait){assert.equal(wait.waitMs,1000);assert.ok(events.find(e=>e.event==='captcha_matched').elapsedMs-wait.elapsedMs>=990);}
     assert.ok(dateRequests.every(request=>request.date!==target.date||request.afterRelease));
     const record={scope:'Isolated browser fixture; synthetic CAPTCHA and explicitly mocked network, not live booking speed',payClicked:false,releaseToPayVisibleMs:events.find(event=>event.event==='pay_visible').elapsedMs,releaseToPayReadyMs:events.find(event=>event.event==='pay_ready').elapsedMs,events};
     await fs.mkdir('artifacts/optimization-20261105',{recursive:true});
-    await fs.writeFile(`artifacts/optimization-20261105/fixture-release-${captchaRecovery?'recovery':'result'}.json`,JSON.stringify(record,null,2)+'\n');
+    await fs.writeFile(`artifacts/optimization-20261105/fixture-release-${configuredWait===undefined?'default-wait':'zero-wait'}.json`,JSON.stringify(record,null,2)+'\n');
     t.diagnostic(JSON.stringify({fixtureReleaseToPayVisibleMs:record.releaseToPayVisibleMs,fixtureReleaseToPayReadyMs:record.releaseToPayReadyMs,payClicked:false}));
   } finally {await browser.close();}
 });

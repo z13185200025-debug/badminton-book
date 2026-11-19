@@ -30,3 +30,19 @@ test('stopping during the extra delay never emits permission to begin selection'
   assert.equal(c.events.some(e=>e.event==='booking_started'),false);
   assert.equal(c.now(),10200);
 });
+
+test('release catalog preparation uses the configured delay window instead of adding to it',async()=>{
+  for(const duration of [700,2500]){
+    const c=clock(10000);let calls=0;
+    const result=await waitForBookingStart({...c,releaseAt:10000,delayMs:2000,prepare:async()=>{calls++;for(let left=duration;left>0;left-=Math.min(left,200))await c.wait(Math.min(left,200));}});
+    assert.equal(calls,1);assert.equal(c.now(),10000+Math.max(2000,duration));
+    assert.equal(result.clockLatenessMs,Math.max(0,duration-2000));
+  }
+});
+
+test('failed preparation stops once without waiting again or authorizing selection',async()=>{
+  const c=clock(10000),error=Object.assign(new Error('catalog deadline'),{code:'VENUE_CATALOG_TIMEOUT'});let calls=0;
+  await assert.rejects(()=>waitForBookingStart({...c,releaseAt:10000,delayMs:2000,prepare:async()=>{calls++;await c.wait(100);throw error;}}),e=>e===error);
+  assert.equal(calls,1);assert.equal(c.now(),10100);
+  assert.equal(c.events.some(e=>e.event==='booking_started'),false);
+});

@@ -73,6 +73,7 @@ function renderTechnical(run){
     ['场次选择耗时',seconds(duration('booking_started','selection_verified'))],
     ['滑块检查',run.captcha?`${run.captcha.attempts||0} 次匹配 · ${run.captcha.code===undefined?'校验中':run.captcha.passed?'通过':'未通过'} · ${seconds(duration('captcha_detected','captcha_result'))}`:'—'],
     ['匹配耗时 / 匹配度',run.captcha?`${run.captcha.matchMs??'—'} ms / ${run.captcha.score??'—'}`:'—'],
+    ['验证前主动等待',run.captcha?.readyWaitMs!==undefined?`${run.captcha.readyWaitMs} ms`:'—'],
     ['挑战等待 / 校验接口 / 校验后提交',run.captcha?`${run.captcha.challengeAgeMs??'—'} / ${run.captcha.checkDurationMs??'—'} / ${run.captcha.afterCheckMs??'—'} ms`:'—'],
     ['二次校验内容 / 订单结果',run.captcha?`${({matched:'与滑块一致',mismatched:'不一致',unreadable:'格式未识别',unavailable:'暂无证据'})[run.captcha.proofStatus]||'尚未提交'} / ${run.captcha.orderRejected?'服务器拒绝':run.orderResponse?.code==='200'?'提交已接受':'待确认'}`:'—'],
     ['验证 / 提交重试', '0 次 · 失败即停止，订单不明时需手动核对'],

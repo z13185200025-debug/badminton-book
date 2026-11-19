@@ -74,7 +74,7 @@ async function fixture(fn){
   await context.route('**/*',async route=>{
    const r=route.request(),u=new URL(r.url());state.requests.push(u.pathname+u.search);
    if(r.method()!=='GET'){state.writes++;return route.fulfill({json:{code:200,data:{tradeNo:'D999'}}});}
-   if(u.pathname.includes('/campus/venue/info'))return route.fulfill({json:catalog(state.entries)});
+   if(u.pathname.includes('/campus/venue/info'))return state.catalogRoute?state.catalogRoute(route):route.fulfill({json:catalog(state.entries)});
    if(u.pathname.includes('/front/website/venue_sites/'))return route.fulfill({json:{code:200,data:entry(Number(u.pathname.split('/').at(-1)))}});
    if(u.pathname.includes('/day/info'))return route.fulfill({json:state.gate?{code:400,message:'当日8点以后才能查看当天的预约'}:state.day(Number(u.searchParams.get('venueSiteId')),u.searchParams.get('searchDate'))});
    if(u.pathname.includes('/protocols/'))return route.fulfill({json:{code:200}});
@@ -143,6 +143,58 @@ test('catalog refresh uses the school request helper instead of replaying an exp
   await page.locator('body').evaluate(body=>{body.__vue__={commonMethods:{emitAjax:async options=>{window.helperCalls=(window.helperCalls||0)+1;const r=await fetch('/venue-server/api/reservation/campus/venue/info?sportType=156');options.success((await r.json()).data);}}};});
   assert.equal((await refreshVenueCatalog(page)).entries[0].id,1);
   assert.equal(await page.evaluate(()=>window.helperCalls),1);
+ });
+});
+
+test('catalog uses the actual response even when the website omits its callback',async()=>{
+ await fixture(async(page,state)=>{
+  const router=await createVenueRouter(page,[target()]);
+  venueState(page).catalogRequest.headers.sign='expired-test-signature';
+  await page.locator('body').evaluate(body=>{body.__vue__={commonMethods:{emitAjax:options=>{window.helperCalls=(window.helperCalls||0)+1;fetch('/venue-server'+options.path+'?sportType='+options.data.sportType).catch(()=>{});}}};});
+  state.entries=[entry(346)];
+  await router.refresh({force:true});
+  assert.deepEqual(router.targets.map(t=>t.venueId),[346]);
+  assert.equal(await page.evaluate(()=>window.helperCalls),1);
+ });
+});
+
+test('a dropped callback cannot hide an HTTP rate limit or trigger stale-catalog fallback',async()=>{
+ await fixture(async(page,state)=>{
+  const router=await createVenueRouter(page,[target()]);
+  await page.locator('body').evaluate(body=>{body.__vue__={commonMethods:{emitAjax:options=>{fetch('/venue-server'+options.path+'?sportType='+options.data.sportType).catch(()=>{});}}};});
+  let reads=0;state.catalogRoute=route=>{reads++;return route.fulfill({status:429,json:{message:'Too many requests'}});};
+  await assert.rejects(()=>router.refresh({force:true}),e=>e.code==='RATE_LIMITED');
+  assert.equal(reads,1);assert.equal(router.targets.length,0);
+  await assert.rejects(()=>router.pageFor(target()),e=>e.code==='VENUE_CHANGED');
+ });
+});
+
+test('a catalog network failure stops immediately rather than waiting for the callback timeout',async()=>{
+ await fixture(async(page,state)=>{
+  const router=await createVenueRouter(page,[target()]);
+  await page.locator('body').evaluate(body=>{body.__vue__={commonMethods:{emitAjax:options=>{fetch('/venue-server'+options.path+'?sportType='+options.data.sportType).catch(()=>{});}}};});
+  let reads=0;state.catalogRoute=route=>{reads++;return route.abort('connectionreset');};
+  const started=performance.now();
+  await assert.rejects(()=>router.refresh({force:true}),e=>e.code==='VENUE_CATALOG_UNAVAILABLE'&&/请求失败/.test(e.message));
+  assert.ok(performance.now()-started<1500);
+  assert.equal(reads,1);assert.equal(router.targets.length,0);
+ });
+});
+
+test('a hanging catalog request has one deadline, no retries, and cannot reactivate stale targets on a late response',async()=>{
+ await fixture(async(page,state)=>{
+  const router=await createVenueRouter(page,[target()]);
+  await page.locator('body').evaluate(body=>{body.__vue__={commonMethods:{emitAjax:options=>{fetch('/venue-server'+options.path+'?sportType='+options.data.sportType).catch(()=>{});}}};});
+  const listeners=['request','response','requestfailed','close'].map(e=>page.listenerCount(e));
+  let reads=0,finish;
+  const arrived=new Promise(resolve=>finish=resolve);
+  state.catalogRoute=async route=>{reads++;await new Promise(resolve=>setTimeout(resolve,350));await route.fulfill({json:catalog([entry(346)])});finish();};
+  const started=performance.now();
+  await assert.rejects(()=>router.refresh({force:true,timeoutMs:150}),e=>e.code==='VENUE_CATALOG_TIMEOUT');
+  assert.ok(performance.now()-started<1000);
+  await arrived;
+  assert.equal(reads,1);assert.equal(router.targets.length,0);
+  assert.deepEqual(['request','response','requestfailed','close'].map(e=>page.listenerCount(e)),listeners);
  });
 });
 test('scheduled preheat warms both known halls without making inactive routes eligible or rereading their notice at release',async()=>{

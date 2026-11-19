@@ -30,6 +30,7 @@
   "maxAmount": 0,
   "releaseWindowSeconds": 120,
   "captchaTimeoutSeconds": 300,
+  "captchaReadyWaitMs": 1000,
   "maxCaptchaAttempts": 1,
   "schoolAutomationPermissionConfirmed": false
 }

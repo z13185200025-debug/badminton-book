@@ -20,6 +20,9 @@ test('interface diagnostics retain safe latency and result fields, count failure
   emit('request_failed',{endpoint:'/venue-server/api/reservation/day/info',durationMs:400});
   const request=run.requests['/api/reservation/day/info'];
   assert.equal(request.count,2);assert.equal(request.failures,1);assert.equal(request.durationMs,400);
+  emit('captcha_ready_wait',{waitMs:1000,token:'secret-token'});
+  assert.equal(run.captcha.readyWaitMs,1000);
+  assert.match(run.events.at(-1).label,/只尝试一次/);
   emit('captcha_matched',{attempt:1,matchMs:11.5,score:.92});emit('captcha_result',{repCode:'0000',token:'secret-token'});
   assert.equal(run.captcha.passed,true);assert.equal(run.captcha.attempts,1);
   assert.doesNotMatch(JSON.stringify(run),/secret-token|private-body/);
